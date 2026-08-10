@@ -56,6 +56,12 @@ export class OvertonClient {
     try {
       res = await fetch(`${this.baseUrl}${path}`, {
         ...init,
+        // Overton requires this on every write. A cross-origin form post cannot
+        // set a custom header, so demanding one is its CSRF guard — and an API
+        // client is exactly who is expected to send it. Applied to reads too:
+        // one header on every request is a smaller thing to get wrong than a
+        // rule about which verbs need it.
+        headers: { ...(init?.headers as Record<string, string> | undefined), "x-overton": "1" },
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (e) {

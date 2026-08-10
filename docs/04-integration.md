@@ -29,6 +29,16 @@ Same answers from all three — they call the same function.
 
 Add `&format=text` to any `ask` for the human rendering.
 
+**Every non-GET request needs `x-overton: 1`.** A cross-origin form post cannot
+set a custom header, so requiring one is the CSRF guard for a loopback service
+with no authentication. An API client just sends it:
+
+```bash
+curl -X POST localhost:7787/v1/claim \
+  -H 'content-type: application/json' -H 'x-overton: 1' \
+  -d '{"project":"myproject","account":"claude-personal"}'
+```
+
 **A refusal is 200, not 4xx.** The request was well-formed and the answer is
 data. A `wait` is not a client error, and returning 429 invites middleware to
 retry on a schedule of its own choosing rather than the one the decision
