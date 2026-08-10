@@ -1,0 +1,30 @@
+{
+  "name": "overton",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "overton": "./apps/overton/src/index.ts"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "overton": "bun run apps/overton/src/index.ts",
+    "test": "bun test",
+    "typecheck": "bun run --filter='*' typecheck"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@overton/core": "workspace:*",
+    "@overton/providers": "workspace:*",
+    "@overton/ledger": "workspace:*",
+    "@overton/policy": "workspace:*",
+    "@overton/engine": "workspace:*",
+    "@overton/server": "workspace:*"
+  }
+}

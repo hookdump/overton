@@ -1,0 +1,76 @@
+# ~/.overton/config.yaml
+#
+# Overton decides who may spend, on whose budget, right now.
+# Every account here is a symmetric row: there is no "current" account, and
+# every request names the one it wants.
+
+accounts:
+  claude-personal:
+    provider: anthropic
+    config_dir: ~/.claude              # the profile whose credentials to read
+    # plan: max                        # optional; the meter reports it anyway
+
+    weekly_target_pct: 85              # account-wide stop, all projects
+    five_hour_target_pct: 90
+    interactive_reserve_pct: 15        # held back for YOUR terminal work
+    max_concurrent: 6
+    meter_interval_sec: 180
+
+  # A second Claude seat. Same shape — that is the point.
+  # claude-work:
+  #   provider: anthropic
+  #   config_dir: ~/.claude-profiles/work
+
+  # codex-personal:
+  #   provider: codex
+  #   codex_home: ~/.codex
+
+  # Local models: free capacity for the cheap high-volume roles.
+  # ollama:
+  #   provider: unmetered
+  #   max_concurrent: 2
+
+projects:
+  # `roots` is how spend is matched to a project: a transcript whose working
+  # directory is under one of these is charged here. Longest prefix wins, so a
+  # monorepo package can be its own project.
+  example:
+    roots:
+      - ~/Projects/example
+    accounts:
+      claude-personal:
+        # A WEIGHT, not a percentage. Shares are normalised across every project
+        # naming this account, so three projects at 1.0 get a third each and you
+        # reroute capacity by changing one number.
+        weekly_share: 1
+        five_hour:
+          # burst  no pacing, just a share of simultaneous capacity (default)
+          # pace   pace the 5h window too
+          # off    do not gate on the 5h window at all
+          mode: burst
+
+  # A side project that gets a fifth of the personal account and may never
+  # touch a work one — expressed by simply not naming it.
+  # sideproject:
+  #   roots: [~/Projects/sideproject]
+  #   accounts:
+  #     claude-personal: { weekly_share: 0.25 }
+
+policy:
+  # Every policy rules on every request and the WORST verdict wins, so this
+  # order affects only which of two equally severe refusals is reported.
+  chain: [account-stop, reading-guard, allocation, concurrency]
+
+  weekly:
+    floor_pct: 0.15   # keeps the fleet moving the instant a window resets
+    slack_pct: 0.05   # tolerance so one run cannot trip the gate
+
+  freshness:
+    stale_sec: 150         # a 5h reading older than this is stale
+    week_stale_sec: 21600  # a weekly one barely moves; 6h is fine
+
+  claim_lease_sec: 300     # a claim not renewed within this is reaped
+
+server:
+  host: 127.0.0.1   # loopback only. Expose with `tailscale serve`, not 0.0.0.0
+  port: 7787

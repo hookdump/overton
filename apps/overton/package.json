@@ -1,0 +1,16 @@
+{
+  "name": "@overton/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "overton": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json" },
+  "dependencies": {
+    "@overton/core": "workspace:*",
+    "@overton/providers": "workspace:*",
+    "@overton/ledger": "workspace:*",
+    "@overton/policy": "workspace:*",
+    "@overton/engine": "workspace:*",
+    "@overton/server": "workspace:*"
+  }
+}
