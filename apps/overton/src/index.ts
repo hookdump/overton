@@ -30,6 +30,7 @@ LOOKING
   status                      accounts, windows, claims, at a glance
   windows [account]           what each account's meter says
   projects                    each project's share, allocation and pace
+  project ls | ensure | rm    list, create/update, or remove a project
   ledger <account>            how a window was actually spent, by project
   explain <project> <account> every fact behind a decision
   claims [--account A]        what is holding capacity

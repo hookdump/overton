@@ -108,6 +108,44 @@ export async function testEnvironment(
     }
   }
 
+  // --- the project ---------------------------------------------------------
+  // The failure this catches is the one that has bitten twice: an agent that
+  // looks fully configured, saves cleanly, and is denied on every heartbeat
+  // because its project was never allocated anything on that account.
+  const projectId = str(config.project);
+  if (reachable && accountId) {
+    const seatArgs =
+      `overton project ensure ${projectId ?? "<name>"}` +
+      (str(config.cwd) ? ` --root ${str(config.cwd)}` : "") +
+      ` --account ${accountId}=1`;
+    try {
+      const decision = await overton.ask(projectId ?? "", accountId);
+      if (decision.verdict === "deny" && /not configured to use|allocated nothing/.test(decision.summary)) {
+        checks.push({
+          code: "project_not_allocated",
+          level: "error",
+          message: decision.summary,
+          detail: "Every heartbeat will be refused until this project has a share of this account.",
+          hint: `Run: ${seatArgs}`,
+        });
+      } else {
+        checks.push({
+          code: "project_ok",
+          level: "info",
+          message: `Project \`${projectId ?? "(company id)"}\` may spend on \`${accountId}\``,
+          detail: `right now: ${decision.verdict}${decision.verdict === "go" ? "" : ` — ${decision.summary}`}`,
+        });
+      }
+    } catch {
+      checks.push({
+        code: "project_check_failed",
+        level: "warn",
+        message: "Could not check whether this project may spend on this account",
+        hint: `If heartbeats are refused, run: ${seatArgs}`,
+      });
+    }
+  }
+
   // --- the engine binary ---------------------------------------------------
   let engineId = "claude";
   /** Env assignments found on the command, if it was written in shell style. */

@@ -14,6 +14,7 @@ import { DEFAULT_OVERTON_URL } from "../constants.js";
 
 export async function getConfigSchema(): Promise<AdapterConfigSchema> {
   let accountOptions: ConfigFieldOption[] = [];
+  let projectOptions: ConfigFieldOption[] = [];
   let accountHint =
     "Which subscription to spend from. Overton is not reachable, so this is free text — check `overton status`.";
 
@@ -30,6 +31,12 @@ export async function getConfigSchema(): Promise<AdapterConfigSchema> {
       };
     });
     if (accountOptions.length) accountHint = "Which subscription this agent spends from.";
+
+    const cfg = await new OvertonClient(DEFAULT_OVERTON_URL).config();
+    projectOptions = Object.entries(cfg.projects ?? {}).map(([id, p]) => ({
+      value: id,
+      label: `${id}${p.accounts ? ` — ${Object.keys(p.accounts).join(", ")}` : ""}`,
+    }));
   } catch {
     // Not fatal. The field degrades to free text rather than blocking the form
     // — a user configuring an agent before starting the daemon is a normal
@@ -50,8 +57,16 @@ export async function getConfigSchema(): Promise<AdapterConfigSchema> {
       {
         key: "project",
         label: "Overton project",
-        type: "text",
-        hint: "Whose share of the account this spends. Defaults to the Paperclip company id.",
+        // A combobox rather than a select: pick an existing project, or type a
+        // new name. Typing one does not create it — allocating budget as a side
+        // effect of saving a form is exactly the kind of silent magic this
+        // system exists to avoid — so the environment test names the one
+        // command that does.
+        type: projectOptions.length ? "combobox" : "text",
+        options: projectOptions.length ? projectOptions : undefined,
+        hint: projectOptions.length
+          ? "Whose share of the account this spends. Pick one, or type a new name and create it with `overton project ensure <name>`."
+          : "Whose share of the account this spends. Defaults to the Paperclip company id.",
         group: "Budget",
       },
       {

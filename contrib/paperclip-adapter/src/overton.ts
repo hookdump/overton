@@ -89,6 +89,13 @@ export class OvertonClient {
     return this.call<AccountView[]>("/v1/accounts");
   }
 
+  /** Project ids and which accounts each may use, straight from config. */
+  async config(): Promise<{
+    projects: Record<string, { accounts?: Record<string, unknown>; roots?: string[] }>;
+  }> {
+    return this.call("/v1/config");
+  }
+
   /** One account by id, or null. Used to inherit its seat. */
   async account(accountId: string): Promise<AccountView | null> {
     return (await this.accounts()).find((a) => a.accountId === accountId) ?? null;
