@@ -23,8 +23,10 @@ Then in Paperclip: **Adapters → Install External Adapter → Local path**, and
 point it at this directory. Paperclip validates that the package exports
 `createServerAdapter()` and registers the adapter type `overton`.
 
-After changing the code, hit **Reload** on the adapter row — the runtime
-hot-swaps the module and invalidates cached config schemas.
+After changing the code, **restart Paperclip**. `Reload` on the adapter row
+refreshes the registry record, but Node's ESM cache keeps returning the module
+that was imported first, so code edits do not take effect until the process
+restarts.
 
 ## Configure an agent
 
@@ -91,6 +93,22 @@ Claude seat into one provider row is precisely the conflation Overton exists to
 undo. A never-metered account reports a `null` percentage rather than being
 omitted — "no reading" and "0% used" are opposite facts.
 
+## What the agent actually receives
+
+Same three things the built-in adapters give it, because without any one of them
+a run completes and the issue still stalls:
+
+| | |
+|---|---|
+| **Prompt** | `context.paperclipTaskMarkdown` + the wake note + session handoff + the standing heartbeat template — composed in Paperclip's order. A resumed session gets only the delta. |
+| **Environment** | `buildPaperclipEnv(agent)` plus the run, task, wake, approval and linked-issue vars, and `PAPERCLIP_API_KEY` from the run's `authToken` — never from config. |
+| **Tools** | Paperclip's per-run MCP servers, written to a 0600 config and passed as `--mcp-config … --strict-mcp-config`. This is what lets the agent record a disposition. |
+
+If Paperclip supplies no MCP servers for a run, the adapter says so in the log
+rather than letting you discover it from an issue that never closes. The Codex
+and Ollama engines take MCP through their own config rather than a flag, so they
+can do work but cannot close issues — use Claude for issue-driven agents.
+
 ## Design notes
 
 **It fails closed.** With no arbiter reachable, the heartbeat is skipped rather
@@ -105,9 +123,15 @@ and they all would.
 crash, a timeout or a cancellation gives the capacity back rather than idling
 the account until Overton's reaper notices.
 
-**Zero runtime dependencies.** Every import from `@paperclipai/adapter-utils` is
-type-only, and the Overton client is hand-rolled over `fetch`. A version bump on
-either side cannot break the gate.
+**It uses Paperclip's own helpers.** The first version imported only types, on
+the theory that zero runtime dependencies made the gate unbreakable. That was
+the wrong trade: an agent needs the prompt, environment and MCP config that
+`@paperclipai/adapter-utils` assembles, and hand-rolling them produced an agent
+that woke up, found nothing, and reported it had nothing to do. The gate is the
+easy half; being a real Paperclip citizen is the rest.
+
+The Overton client is still hand-rolled over `fetch`, so nothing about Overton's
+own API depends on Paperclip's release cycle.
 
 **One adapter, three engines** rather than three adapters. The interesting
 behaviour is the gate and it is identical for every engine; three near-identical
@@ -141,9 +165,13 @@ node --input-type=module -e '
 
 ## Compatibility
 
-Built against `@paperclipai/adapter-utils@2026.722.0`. Type-only imports mean a
-minor drift in that package will not break the runtime, but if the
-`ServerAdapterModule` shape changes materially, rebuild and check.
+Built against `@paperclipai/adapter-utils@2026.722.0`, which it depends on at
+runtime for the prompt, environment and MCP assembly. Pin it to the version your
+Paperclip ships; rebuild after upgrading Paperclip.
+
+Local-path adapters need a **Paperclip restart** to pick up code changes —
+`Reload` refreshes the registry record, but Node's ESM cache keeps serving the
+first-imported module.
 
 [paperclip]: https://github.com/paperclipai/paperclip
 [overton]: https://github.com/hookdump/overton

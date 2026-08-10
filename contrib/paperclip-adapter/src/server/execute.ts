@@ -14,13 +14,12 @@
  */
 
 import { spawn } from "node:child_process";
-import type {
-  AdapterExecutionContext,
-  AdapterExecutionResult,
-} from "@paperclipai/adapter-utils";
+import type { AdapterExecutionContext, AdapterExecutionResult } from "@paperclipai/adapter-utils";
+import { redactEnvForLogs } from "@paperclipai/adapter-utils/server-utils";
 import { OvertonClient, OvertonError, type Decision } from "../overton.js";
 import { engineFor, parseCommand } from "../engines.js";
 import { ADAPTER_TYPE } from "../constants.js";
+import { buildPrompt, paperclipEnv, resolveCwd, runtimeStateDir, writeMcpConfig } from "../paperclip.js";
 
 /**
  * Exit code for "no work done, try again later" (EX_TEMPFAIL).
@@ -44,21 +43,6 @@ function num(v: unknown): number | undefined {
 }
 function strArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-}
-
-/** Build the prompt Paperclip wants this heartbeat to run. */
-function buildPrompt(ctx: AdapterExecutionContext): string {
-  const c = ctx.context ?? {};
-  const explicit = str(c.prompt) ?? str((ctx.config ?? {}).prompt);
-  if (explicit) return explicit;
-
-  const parts: string[] = [];
-  if (str(c.taskTitle)) parts.push(`# ${str(c.taskTitle)}`);
-  if (str(c.taskBody)) parts.push(String(c.taskBody));
-  if (str(c.wakeReason)) parts.push(`\n(woken because: ${str(c.wakeReason)})`);
-  return parts.length
-    ? parts.join("\n\n")
-    : "You have been woken by a scheduled heartbeat. Review your assigned work and act on it.";
 }
 
 function refusal(decision: Decision, ctx: AdapterExecutionContext): AdapterExecutionResult {
@@ -161,42 +145,78 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
   // --- 3. run --------------------------------------------------------------
   const engine = engineFor(str(config.engine));
-  const prompt = buildPrompt(ctx);
-  const sessionId = str((ctx.runtime.sessionParams ?? {}).sessionId) ?? str(ctx.runtime.sessionId);
-  const cwd = str(config.cwd);
+
+  // Everything Paperclip expects the agent to have. Assembled before the
+  // prompt, because the workspace it names decides where the run happens.
+  const env = paperclipEnv(ctx);
+  const sessionId = bool(config.persistSession, true)
+    ? (str((ctx.runtime.sessionParams ?? {}).sessionId) ?? str(ctx.runtime.sessionId))
+    : undefined;
+
+  const { prompt, metrics } = buildPrompt(ctx, sessionId ?? null);
+
+  let mcp = { configPath: null as string | null, count: 0, identity: "" };
+  try {
+    mcp = await writeMcpConfig(ctx, runtimeStateDir(process.env, ctx.agent.companyId, ctx.agent.id));
+  } catch (e) {
+    // Not fatal, but loud: the agent can still do the work, it just cannot
+    // record the outcome, and a silently tool-less agent looks like a lazy one.
+    await ctx.onLog("stderr", `overton: could not write the Paperclip MCP config — ${(e as Error).message}\n`);
+  }
+  if (mcp.count === 0) {
+    await ctx.onLog(
+      "stdout",
+      "overton: Paperclip supplied no MCP servers for this run — the agent will have no tools to " +
+        "update issues, so any work it does will stall on \"missing issue disposition\".\n",
+    );
+  }
+  if (engine.id !== "claude" && mcp.count > 0) {
+    await ctx.onLog(
+      "stdout",
+      `overton: ${engine.label} does not take Paperclip's MCP servers from a flag, so this run has ` +
+        "no tools to record a disposition. Use the Claude engine for issue-driven work.\n",
+    );
+  }
+
+  const parsed = parseCommand(str(config.command) ?? engine.defaultCommand);
+  // Paperclip's own workspace wins over a configured cwd: it is where artifacts
+  // and git state are expected to land.
+  const cwd = resolveCwd(env, str(config.cwd) ?? null);
   const timeoutSec = num(config.timeoutSec) ?? 0;
   const graceSec = num(config.graceSec) ?? 15;
-
-  // An existing agent's `command` often carries env assignments, because that
-  // is how the built-in adapters express which profile a seat uses. Parse them
-  // out rather than handing the string to a shell.
-  const parsed = parseCommand(str(config.command) ?? engine.defaultCommand);
 
   const invocation = engine.build({
     command: parsed.command,
     prompt,
     model: str(config.model),
-    sessionId: bool(config.persistSession, true) ? sessionId : undefined,
-    cwd,
+    sessionId,
+    cwd: cwd ?? undefined,
     extraArgs: strArray(config.extraArgs),
-    env: parsed.env,
-    // An explicit field wins over an env prefix in the command: it is the more
-    // specific statement, and it is the one the environment test validates.
+    env: { ...env, ...parsed.env },
     configDir: str(config.configDir) ?? parsed.env.CLAUDE_CONFIG_DIR,
     codexHome: str(config.codexHome) ?? parsed.env.CODEX_HOME,
     skipPermissions: bool(config.dangerouslySkipPermissions, false),
+    mcpConfigPath: engine.id === "claude" ? mcp.configPath : null,
+    instructionsFile: str(config.instructionsFilePath),
+    maxTurns: num(config.maxTurnsPerRun) ?? 0,
+    effort: str(config.effort) ?? str(config.modelReasoningEffort) ?? undefined,
   });
 
   await ctx.onMeta?.({
     adapterType: ADAPTER_TYPE,
     command: invocation.command,
     commandArgs: invocation.args,
-    cwd,
+    cwd: cwd ?? undefined,
     prompt,
+    promptMetrics: metrics,
+    // Redacted: the env carries PAPERCLIP_API_KEY and is echoed into run logs.
+    env: redactEnvForLogs({ ...env, ...invocation.env }),
     commandNotes: [
       `overton: ${decision.verdict} via ${decision.policy}`,
       `project ${project} on account ${account}`,
       claimId ? `claim ${claimId}` : "no claim",
+      mcp.count > 0 ? `${mcp.count} Paperclip MCP server(s)` : "no MCP servers",
+      sessionId ? `resuming session ${sessionId}` : "fresh session",
     ],
     context: { engine: engine.id, project, account },
   });
@@ -206,7 +226,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const beat = claimId ? setInterval(() => void overton.renew(claimId!), 60_000) : null;
 
   try {
-    return await runEngine({ ctx, invocation, engine, prompt, timeoutSec, graceSec, cwd });
+    return await runEngine({ ctx, invocation, engine, prompt, timeoutSec, graceSec, cwd: cwd ?? undefined, mcpIdentity: mcp.identity });
   } finally {
     if (beat) clearInterval(beat);
     if (claimId) await overton.release(claimId);
@@ -215,6 +235,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
 interface RunArgs {
   ctx: AdapterExecutionContext;
+  /**
+   * Recorded with the session so a later run does not resume a session that was
+   * created against a different MCP server set — the agent would believe it has
+   * tools that are no longer wired.
+   */
+  mcpIdentity: string;
   invocation: ReturnType<ReturnType<typeof engineFor>["build"]>;
   engine: ReturnType<typeof engineFor>;
   prompt: string;
@@ -312,7 +338,9 @@ function runEngine(a: RunArgs): Promise<AdapterExecutionResult> {
         billingType: engine.id === "ollama" ? "fixed" : "subscription",
         costUsd: usage.costUsd ?? null,
         sessionId: usage.sessionId ?? null,
-        sessionParams: usage.sessionId ? { sessionId: usage.sessionId } : null,
+        sessionParams: usage.sessionId
+          ? { sessionId: usage.sessionId, mcpServerIdentity: a.mcpIdentity }
+          : null,
         sessionDisplayId: usage.sessionId ?? null,
         summary: usage.summary ?? null,
       });

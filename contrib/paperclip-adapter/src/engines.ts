@@ -86,6 +86,16 @@ export interface BuildOptions {
   /** Codex home, same idea. */
   codexHome?: string;
   skipPermissions: boolean;
+  /**
+   * Paperclip's per-run MCP config. This is how the agent gets the tools it
+   * needs to record a disposition; without it a run can succeed and the issue
+   * still stalls.
+   */
+  mcpConfigPath?: string | null;
+  /** The agent's standing instructions (AGENTS.md), for a fresh session only. */
+  instructionsFile?: string | null;
+  maxTurns?: number;
+  effort?: string;
 }
 
 function lastJsonObject(stdout: string, predicate: (o: any) => boolean): any | null {
@@ -117,10 +127,20 @@ const claude: EngineSpec = {
   defaultCommand: "claude",
   provider: "anthropic",
   build(o) {
-    const args = ["--print", "--output-format", "stream-json", "--verbose"];
-    if (o.model) args.push("--model", o.model);
+    // `-` is the prompt argument: read it from stdin. Without it the CLI waits
+    // on a positional prompt that never arrives.
+    const args = ["--print", "-", "--output-format", "stream-json", "--verbose"];
     if (o.sessionId) args.push("--resume", o.sessionId);
     if (o.skipPermissions) args.push("--dangerously-skip-permissions");
+    if (o.model) args.push("--model", o.model);
+    if (o.effort) args.push("--effort", o.effort);
+    if (o.maxTurns && o.maxTurns > 0) args.push("--max-turns", String(o.maxTurns));
+    // On a resumed session the instructions are already in the session cache;
+    // re-injecting them costs thousands of tokens per heartbeat.
+    if (o.instructionsFile && !o.sessionId) args.push("--append-system-prompt-file", o.instructionsFile);
+    // `--strict-mcp-config` keeps the agent to Paperclip's servers rather than
+    // also loading whatever the user has configured globally.
+    if (o.mcpConfigPath) args.push("--mcp-config", o.mcpConfigPath, "--strict-mcp-config");
     args.push(...o.extraArgs);
     const env = { ...o.env };
     // The profile directory is how a personal and a work seat coexist. It must
@@ -160,6 +180,10 @@ const codex: EngineSpec = {
     args.push(...o.extraArgs);
     const env = { ...o.env };
     if (o.codexHome) env.CODEX_HOME = o.codexHome;
+    // Codex configures MCP through its own config.toml rather than a flag, so
+    // Paperclip's per-run servers are NOT wired here. A Codex agent can do the
+    // work but cannot record its own disposition; `warnings` says so out loud
+    // rather than leaving it to be discovered from a stalled issue.
     // Codex `exec` reads the prompt from stdin when none is given positionally.
     return { command: o.command, args, env, promptOnStdin: true };
   },

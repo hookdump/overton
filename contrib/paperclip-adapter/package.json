@@ -4,19 +4,42 @@
   "description": "Paperclip adapter that gates every heartbeat on Overton's subscription-window budget, then runs Claude, Codex or Ollama",
   "type": "module",
   "license": "MIT",
-  "keywords": ["paperclip", "paperclip-adapter", "overton", "quota", "claude", "codex", "ollama"],
+  "keywords": [
+    "paperclip",
+    "paperclip-adapter",
+    "overton",
+    "quota",
+    "claude",
+    "codex",
+    "ollama"
+  ],
   "homepage": "https://github.com/hookdump/overton/tree/main/contrib/paperclip-adapter",
-  "repository": { "type": "git", "url": "https://github.com/hookdump/overton", "directory": "contrib/paperclip-adapter" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hookdump/overton",
+    "directory": "contrib/paperclip-adapter"
+  },
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./server": { "types": "./dist/server/index.d.ts", "import": "./dist/server/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20.0.0" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
-    "@paperclipai/adapter-utils": "2026.722.0",
     "@types/node": "^22.19.21",
     "typescript": "^5.7.3"
   },
@@ -24,5 +47,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@paperclipai/adapter-utils": "2026.722.0"
   }
 }
