@@ -87,16 +87,16 @@ export async function getConfigSchema(): Promise<AdapterConfigSchema> {
       // one and the other silently disagrees.
       {
         key: "configDir",
-        label: "Claude profile directory",
+        label: "Claude profile directory (override)",
         type: "text",
-        hint: "CLAUDE_CONFIG_DIR for this seat, e.g. ~/.claude-profiles/personal. Should match the Overton account, or you gate on one subscription and spend from another. Leave blank if the Command field already sets it.",
+        hint: "Leave blank — the seat is inherited from the Overton account above. Set this only to override it with a different profile.",
         group: "Engine",
       },
       {
         key: "codexHome",
-        label: "Codex home",
+        label: "Codex home (override)",
         type: "text",
-        hint: "CODEX_HOME for this seat. Same reasoning as the Claude profile.",
+        hint: "Leave blank — inherited from the Overton account above. Set this only to override it.",
         group: "Engine",
       },
 

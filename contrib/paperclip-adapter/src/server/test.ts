@@ -156,8 +156,17 @@ export async function testEnvironment(
   // the one actually used, and every number downstream is wrong.
   // The seat may be pinned either by the explicit field or by an env prefix on
   // the command. Either is fine; NEITHER is the failure worth warning about.
-  const claudeSeat = str(config.configDir) ?? envPrefix.CLAUDE_CONFIG_DIR;
-  const codexSeat = str(config.codexHome) ?? envPrefix.CODEX_HOME;
+  // Same precedence execute() uses: explicit field, then the command's env
+  // prefix, then whatever the Overton account declares.
+  let inherited: { configDir?: string; codexHome?: string } = {};
+  if (accountId && reachable) {
+    try {
+      const acct = await overton.account(accountId);
+      if (acct) inherited = { configDir: acct.configDir ?? undefined, codexHome: acct.codexHome ?? undefined };
+    } catch { /* reported elsewhere */ }
+  }
+  const claudeSeat = str(config.configDir) ?? envPrefix.CLAUDE_CONFIG_DIR ?? inherited.configDir;
+  const codexSeat = str(config.codexHome) ?? envPrefix.CODEX_HOME ?? inherited.codexHome;
 
   if (engineId === "claude") {
     if (claudeSeat) {
@@ -165,14 +174,18 @@ export async function testEnvironment(
         code: "seat_pinned",
         level: "info",
         message: `Claude profile pinned to ${claudeSeat}`,
-        detail: str(config.configDir) ? "from the profile field" : "from the command's env prefix",
+        detail: str(config.configDir)
+          ? "from the profile field"
+          : envPrefix.CLAUDE_CONFIG_DIR
+            ? "from the command's env prefix"
+            : `inherited from the \`${accountId}\` account`,
       });
     } else {
       checks.push({
         code: "no_config_dir",
         level: "warn",
         message: "Claude will use whichever profile is default",
-        hint: "Set `Claude profile directory` to the profile matching the Overton account, e.g. ~/.claude-profiles/personal, so the seat you gate on is the seat you spend from.",
+        hint: `The \`${accountId ?? "selected"}\` account declares no config_dir, so nothing pins the seat. Add one to ~/.overton/config.yaml, or set \`Claude profile directory\` here.`,
       });
     }
   }

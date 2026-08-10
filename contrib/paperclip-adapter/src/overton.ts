@@ -33,6 +33,9 @@ export interface AccountView {
   }>;
   claims: number;
   maxConcurrent: number;
+  /** Where the account's credentials live, so the seat can be pinned for free. */
+  configDir: string | null;
+  codexHome: string | null;
 }
 
 export class OvertonError extends Error {
@@ -84,6 +87,11 @@ export class OvertonClient {
 
   accounts(): Promise<AccountView[]> {
     return this.call<AccountView[]>("/v1/accounts");
+  }
+
+  /** One account by id, or null. Used to inherit its seat. */
+  async account(accountId: string): Promise<AccountView | null> {
+    return (await this.accounts()).find((a) => a.accountId === accountId) ?? null;
   }
 
   async claim(body: {

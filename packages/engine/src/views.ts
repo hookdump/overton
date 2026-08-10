@@ -9,6 +9,7 @@
 
 import {
   GATED_WINDOWS,
+  expandHome,
   humanDuration,
   paceState,
   paceText,
@@ -37,6 +38,17 @@ export interface AccountView {
   windows: WindowView[];
   claims: number;
   maxConcurrent: number;
+  /**
+   * Where this account's credentials live.
+   *
+   * Exposed so a client can pin the same seat it just gated on, instead of
+   * asking a human to retype a path they already told Overton. Gating on one
+   * subscription and spending from another is silent and makes every number
+   * downstream wrong, so removing the opportunity to mistype it is worth more
+   * than keeping a filesystem path out of a loopback response.
+   */
+  configDir: string | null;
+  codexHome: string | null;
   /** Points of the weekly window that agents may use in total. */
   dispatchable: number;
   /** Attributed so far this epoch, across every project. */
@@ -87,6 +99,12 @@ export function accountViews(o: Overton): AccountView[] {
         })),
       claims: openClaims(o.db, accountId).length,
       maxConcurrent: account.max_concurrent,
+      // EXPANDED. A client puts this straight into CLAUDE_CONFIG_DIR, and an
+      // environment variable is not shell-expanded — a literal `~` there points
+      // at a directory named "~" inside the process's cwd, which silently
+      // becomes a brand new empty profile with no credentials.
+      configDir: account.config_dir ? expandHome(account.config_dir) : null,
+      codexHome: account.codex_home ? expandHome(account.codex_home) : null,
       dispatchable: Math.max(0, account.weekly_target_pct - account.interactive_reserve_pct),
       attributed: epoch ? ledgerTotal(o.db, accountId, "seven_day", epoch.id) : 0,
     });

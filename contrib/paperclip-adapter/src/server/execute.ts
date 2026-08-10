@@ -178,6 +178,22 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     );
   }
 
+  // The seat follows the account by default.
+  //
+  // The account Overton just gated on already declares where its credentials
+  // live, so asking a human to retype that path only creates the chance to type
+  // a different one — and gating on one subscription while spending from
+  // another is silent and corrupts every number downstream. An explicit field
+  // still wins, for the rare agent that needs a different profile.
+  let seat: { configDir?: string; codexHome?: string } = {};
+  try {
+    const acct = await overton.account(account);
+    if (acct) seat = { configDir: acct.configDir ?? undefined, codexHome: acct.codexHome ?? undefined };
+  } catch {
+    // Not fatal: an explicit field or the command's env prefix may still pin it,
+    // and testEnvironment warns when nothing does.
+  }
+
   const parsed = parseCommand(str(config.command) ?? engine.defaultCommand);
   // Paperclip's own workspace wins over a configured cwd: it is where artifacts
   // and git state are expected to land.
@@ -193,8 +209,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     cwd: cwd ?? undefined,
     extraArgs: strArray(config.extraArgs),
     env: { ...env, ...parsed.env },
-    configDir: str(config.configDir) ?? parsed.env.CLAUDE_CONFIG_DIR,
-    codexHome: str(config.codexHome) ?? parsed.env.CODEX_HOME,
+    configDir: str(config.configDir) ?? parsed.env.CLAUDE_CONFIG_DIR ?? seat.configDir,
+    codexHome: str(config.codexHome) ?? parsed.env.CODEX_HOME ?? seat.codexHome,
     skipPermissions: bool(config.dangerouslySkipPermissions, false),
     mcpConfigPath: engine.id === "claude" ? mcp.configPath : null,
     instructionsFile: str(config.instructionsFilePath),
