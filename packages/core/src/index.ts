@@ -5,6 +5,7 @@ export * from "./registry.ts";
 export * from "./decision.ts";
 export * from "./freshness.ts";
 export * from "./config.ts";
+export * from "./config-edit.ts";
 export * from "./db.ts";
 export * from "./paths.ts";
 export * from "./fmt.ts";

@@ -22,6 +22,8 @@
 
 import { EXIT_CODE, renderDecision, type Decision } from "@overton/core";
 import { accountViews, ledgerView, openClaims, projectViews, type Overton } from "@overton/engine";
+import { handleConfig } from "./config-api.ts";
+import { renderPage } from "./ui.ts";
 
 export interface ServeOptions {
   host?: string;
@@ -71,7 +73,23 @@ export function createHandler(source: OvertonSource) {
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
-    if (req.method === "GET" && (path === "/" || path === "/v1/health")) {
+    if (req.method === "GET" && path === "/") {
+      return new Response(renderPage(o), {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
+
+    // Writes carry a custom header. A cross-origin form post cannot set one, so
+    // requiring it forces a CORS preflight that will fail — which is the whole
+    // of the CSRF story a loopback-only, single-user service needs.
+    if (req.method !== "GET" && req.headers.get("x-overton") !== "1") {
+      return json({ error: "writes require the `x-overton: 1` header" }, 403);
+    }
+
+    const configRoute = await handleConfig(o, req, path);
+    if (configRoute) return configRoute;
+
+    if (req.method === "GET" && path === "/v1/health") {
       return json({
         ok: true,
         accounts: Object.keys(o.cfg.accounts).length,

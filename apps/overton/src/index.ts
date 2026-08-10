@@ -130,7 +130,7 @@ async function main(argv: string[]): Promise<number> {
   try {
     const configFile = typeof args.flags.config === "string" ? args.flags.config : paths.configFile;
     const cfg = loadConfig(configFile);
-    overton = new Overton({ db: openDb(paths.dbFile), cfg });
+    overton = new Overton({ db: openDb(paths.dbFile), cfg, configFile });
   } catch (e) {
     if (e instanceof ConfigError) {
       process.stderr.write(`${e.message}\n`);

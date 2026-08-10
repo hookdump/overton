@@ -52,6 +52,12 @@ export interface OvertonOptions {
   policies?: Registry<Policy>;
   fetch?: typeof globalThis.fetch;
   env?: NodeJS.ProcessEnv;
+  /**
+   * Path the config was loaded from. Required only for the write surfaces —
+   * editing is refused rather than guessed when it is absent, because writing
+   * to the wrong file is worse than not writing at all.
+   */
+  configFile?: string;
 }
 
 export interface MeterResult {
@@ -72,6 +78,7 @@ export class Overton {
   readonly providers: Registry<Provider>;
   readonly costSources: Registry<CostSource>;
   readonly policies: Registry<Policy>;
+  readonly configFile: string | null;
   private readonly roots: ProjectRoots;
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly env: NodeJS.ProcessEnv;
@@ -83,6 +90,7 @@ export class Overton {
     this.providers = opts.providers ?? defaultProviders();
     this.costSources = opts.costSources ?? defaultCostSources();
     this.policies = opts.policies ?? defaultPolicies();
+    this.configFile = opts.configFile ?? null;
     this.roots = projectRoots(opts.cfg);
     this.fetchImpl = opts.fetch ?? globalThis.fetch;
     this.env = opts.env ?? process.env;

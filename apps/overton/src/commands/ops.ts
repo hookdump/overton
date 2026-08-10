@@ -111,7 +111,7 @@ const daemon: Command = {
       configMtime = mtime;
       try {
         const cfg = loadConfig(configFile);
-        o = new Overton({ db: o.db, cfg });
+        o = new Overton({ db: o.db, cfg, configFile });
         process.stderr.write(
           `config reloaded: ${Object.keys(cfg.accounts).length} accounts, ${Object.keys(cfg.projects).length} projects\n`,
         );
