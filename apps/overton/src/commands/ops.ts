@@ -4,10 +4,21 @@
 
 import { mkdirSync, existsSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { humanDuration, table } from "@overton/core";
+import { statSync } from "node:fs";
+import { humanDuration, loadConfig, table } from "@overton/core";
+import { Overton } from "@overton/engine";
 import { runMcpStdio, serve } from "@overton/server";
 import type { Command } from "./index.ts";
 import { STARTER_CONFIG } from "../starter.ts";
+
+/** 0 when the file is missing — a deleted config is a change worth noticing. */
+function mtimeOf(file: string): number {
+  try {
+    return statSync(file).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
 
 const meter: Command = {
   async run(ctx) {
@@ -66,7 +77,49 @@ const meter: Command = {
  */
 const daemon: Command = {
   async run(ctx) {
-    const o = ctx.overton;
+    // Mutable, because the config file is reloaded in place. Everything below
+    // reads through `current()` rather than capturing the instance.
+    let o = ctx.overton;
+    // Checked on every read rather than once per tick. A `stat` costs
+    // microseconds and the alternative is a config edit that appears to do
+    // nothing for up to three minutes — long enough to conclude, wrongly, that
+    // the edit was itself wrong.
+    const current = () => {
+      reloadIfChanged();
+      return o;
+    };
+
+    const configFile =
+      typeof ctx.args.flags.config === "string" ? ctx.args.flags.config : ctx.paths.configFile;
+    let configMtime = mtimeOf(configFile);
+
+    /**
+     * Reload when the file changes.
+     *
+     * Without this the daemon answers from the config it started with, while
+     * `overton ask` reads the file every invocation — so the CLI and the HTTP
+     * surface disagree, and both look confident. Adding a project and watching
+     * the daemon keep refusing it is exactly that failure.
+     *
+     * A broken edit is kept OUT: the running config survives, because a daemon
+     * that stops arbitrating on a syntax error fails open for anything that
+     * treats an error as "no opinion".
+     */
+    const reloadIfChanged = () => {
+      const mtime = mtimeOf(configFile);
+      if (mtime === configMtime) return;
+      configMtime = mtime;
+      try {
+        const cfg = loadConfig(configFile);
+        o = new Overton({ db: o.db, cfg });
+        process.stderr.write(
+          `config reloaded: ${Object.keys(cfg.accounts).length} accounts, ${Object.keys(cfg.projects).length} projects\n`,
+        );
+      } catch (e) {
+        process.stderr.write(`config reload FAILED, keeping the previous one: ${(e as Error).message}\n`);
+      }
+    };
+
     const intervals = Object.values(o.cfg.accounts)
       .filter((a) => a.enabled)
       .map((a) => a.meter_interval_sec);
@@ -74,7 +127,7 @@ const daemon: Command = {
 
     const server = ctx.args.flags["no-http"]
       ? null
-      : serve(o, {
+      : serve(current, {
           onRequest: (m, p, s) => {
             if (ctx.args.flags.verbose) process.stderr.write(`${m} ${p} ${s}\n`);
           },
@@ -97,8 +150,8 @@ const daemon: Command = {
 
     while (running) {
       try {
-        const results = await o.meter();
-        o.tick();
+        const results = await current().meter();
+        current().tick();
         for (const r of results) {
           if (r.error) process.stderr.write(`meter ${r.accountId}: ${r.error}\n`);
         }

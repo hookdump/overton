@@ -50,8 +50,24 @@ function respondDecision(d: Decision, url: URL): Response {
   return json({ ...d, exitCode: EXIT_CODE[d.verdict] });
 }
 
-export function createHandler(o: Overton) {
+/**
+ * The runtime is resolved PER REQUEST, not captured once.
+ *
+ * The daemon reloads `config.yaml` when it changes, which produces a new
+ * `Overton`. A handler that closed over the old one would keep answering from
+ * the config the process started with — so `overton ask` (which reads the file
+ * every invocation) and the HTTP surface would disagree, and the disagreement
+ * is invisible: both return a confident, well-formed decision.
+ */
+export type OvertonSource = Overton | (() => Overton);
+
+function resolve(source: OvertonSource): Overton {
+  return typeof source === "function" ? source() : source;
+}
+
+export function createHandler(source: OvertonSource) {
   return async function handle(req: Request): Promise<Response> {
+    const o = resolve(source);
     const url = new URL(req.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
@@ -125,11 +141,12 @@ export function createHandler(o: Overton) {
   };
 }
 
-export function serve(o: Overton, opts: ServeOptions = {}) {
-  const handle = createHandler(o);
+export function serve(source: OvertonSource, opts: ServeOptions = {}) {
+  const handle = createHandler(source);
+  const initial = resolve(source);
   return Bun.serve({
-    hostname: opts.host ?? o.cfg.server.host,
-    port: opts.port ?? o.cfg.server.port,
+    hostname: opts.host ?? initial.cfg.server.host,
+    port: opts.port ?? initial.cfg.server.port,
     async fetch(req) {
       const res = await handle(req);
       opts.onRequest?.(req.method, new URL(req.url).pathname, res.status);
