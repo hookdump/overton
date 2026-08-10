@@ -19,7 +19,7 @@ import type {
   AdapterExecutionResult,
 } from "@paperclipai/adapter-utils";
 import { OvertonClient, OvertonError, type Decision } from "../overton.js";
-import { engineFor } from "../engines.js";
+import { engineFor, parseCommand } from "../engines.js";
 import { ADAPTER_TYPE } from "../constants.js";
 
 /**
@@ -167,16 +167,23 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const timeoutSec = num(config.timeoutSec) ?? 0;
   const graceSec = num(config.graceSec) ?? 15;
 
+  // An existing agent's `command` often carries env assignments, because that
+  // is how the built-in adapters express which profile a seat uses. Parse them
+  // out rather than handing the string to a shell.
+  const parsed = parseCommand(str(config.command) ?? engine.defaultCommand);
+
   const invocation = engine.build({
-    command: str(config.command) ?? engine.defaultCommand,
+    command: parsed.command,
     prompt,
     model: str(config.model),
     sessionId: bool(config.persistSession, true) ? sessionId : undefined,
     cwd,
     extraArgs: strArray(config.extraArgs),
-    env: {},
-    configDir: str(config.configDir),
-    codexHome: str(config.codexHome),
+    env: parsed.env,
+    // An explicit field wins over an env prefix in the command: it is the more
+    // specific statement, and it is the one the environment test validates.
+    configDir: str(config.configDir) ?? parsed.env.CLAUDE_CONFIG_DIR,
+    codexHome: str(config.codexHome) ?? parsed.env.CODEX_HOME,
     skipPermissions: bool(config.dangerouslySkipPermissions, false),
   });
 

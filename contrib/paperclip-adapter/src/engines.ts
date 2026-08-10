@@ -12,6 +12,35 @@
 
 export type EngineId = "claude" | "codex" | "ollama";
 
+/**
+ * Split a configured command into leading `VAR=value` assignments and the
+ * binary itself.
+ *
+ * Paperclip's built-in local adapters accept a shell-flavoured command such as
+ * `CLAUDE_CONFIG_DIR=/Users/me/.claude-profiles/personal claude`, and existing
+ * agents are configured that way. This adapter spawns WITHOUT a shell — passing
+ * that string straight to exec looks for a binary literally named
+ * `CLAUDE_CONFIG_DIR=…` and fails with ENOENT — so the prefix is parsed here
+ * instead of being handed to `/bin/sh`.
+ *
+ * Not using a shell is deliberate: the command may carry a path from config,
+ * and a shell would make quoting bugs into arbitrary execution.
+ */
+export function parseCommand(raw: string): { command: string; env: Record<string, string> } {
+  const env: Record<string, string> = {};
+  // Split on whitespace, honouring simple quoting around values so a profile
+  // path containing a space survives.
+  const tokens = raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? [];
+  let i = 0;
+  for (; i < tokens.length; i++) {
+    const m = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(tokens[i]!);
+    if (!m) break;
+    env[m[1]!] = m[2]!.replace(/^["']|["']$/g, "");
+  }
+  const rest = tokens.slice(i);
+  return { command: (rest[0] ?? raw).replace(/^["']|["']$/g, ""), env };
+}
+
 export interface EngineInvocation {
   command: string;
   args: string[];

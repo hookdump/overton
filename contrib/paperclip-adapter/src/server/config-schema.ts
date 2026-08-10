@@ -81,25 +81,15 @@ export async function getConfigSchema(): Promise<AdapterConfigSchema> {
         hint: "Which CLI runs once the gate says go.",
         group: "Engine",
       },
-      {
-        key: "model",
-        label: "Model",
-        type: "text",
-        hint: "Passed through to the engine. Blank uses its default.",
-        group: "Engine",
-      },
-      {
-        key: "command",
-        label: "Command",
-        type: "text",
-        hint: "Binary to run. Blank uses the engine default (claude / codex / ollama).",
-        group: "Engine",
-      },
+      // `command` and `model` are deliberately NOT declared here. Paperclip
+      // renders those two generically, above the adapter's own fields, and
+      // re-declaring them binds two inputs to one config key — the user edits
+      // one and the other silently disagrees.
       {
         key: "configDir",
         label: "Claude profile directory",
         type: "text",
-        hint: "CLAUDE_CONFIG_DIR for this seat, e.g. ~/.claude-profiles/personal. Should match the Overton account, or you gate on one subscription and spend from another.",
+        hint: "CLAUDE_CONFIG_DIR for this seat, e.g. ~/.claude-profiles/personal. Should match the Overton account, or you gate on one subscription and spend from another. Leave blank if the Command field already sets it.",
         group: "Engine",
       },
       {

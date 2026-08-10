@@ -18,7 +18,7 @@ import type {
   AdapterEnvironmentTestResult,
 } from "@paperclipai/adapter-utils";
 import { OvertonClient } from "../overton.js";
-import { engineFor } from "../engines.js";
+import { engineFor, parseCommand } from "../engines.js";
 import { ADAPTER_TYPE, DEFAULT_OVERTON_URL } from "../constants.js";
 
 const execFileAsync = promisify(execFile);
@@ -110,34 +110,35 @@ export async function testEnvironment(
 
   // --- the engine binary ---------------------------------------------------
   let engineId = "claude";
+  /** Env assignments found on the command, if it was written in shell style. */
+  let envPrefix: Record<string, string> = {};
   try {
     const engine = engineFor(str(config.engine));
     engineId = engine.id;
-    const command = str(config.command) ?? engine.defaultCommand;
-    // Only probe a bare binary name. A configured command may carry env
-    // prefixes or arguments, and shelling out to probe it would execute it.
-    if (/^[\w.-]+$/.test(command)) {
-      try {
-        const { stdout } = await execFileAsync(command, ["--version"], { timeout: 8000 });
-        checks.push({
-          code: "engine_ok",
-          level: "info",
-          message: `${engine.label}: ${stdout.trim().split("\n")[0] ?? "found"}`,
-        });
-      } catch {
-        checks.push({
-          code: "engine_missing",
-          level: "error",
-          message: `\`${command}\` is not runnable on this host`,
-          hint: `Install ${engine.label}, or set \`command\` to its full path.`,
-        });
-      }
-    } else {
+    // The configured command may carry `VAR=value` prefixes; strip them so the
+    // binary itself is what gets probed. This is the same parse `execute` does,
+    // so a pass here means the same thing a run would find.
+    const parsed = parseCommand(str(config.command) ?? engine.defaultCommand);
+    envPrefix = parsed.env;
+    try {
+      const { stdout } = await execFileAsync(parsed.command, ["--version"], {
+        timeout: 8000,
+        env: { ...process.env, ...parsed.env },
+      });
       checks.push({
-        code: "engine_unprobed",
+        code: "engine_ok",
         level: "info",
-        message: `Custom command configured; not probed`,
-        detail: command,
+        message: `${engine.label}: ${stdout.trim().split("\n")[0] ?? "found"}`,
+        detail: Object.keys(parsed.env).length
+          ? `via ${parsed.command}, with ${Object.keys(parsed.env).join(", ")} from the command`
+          : undefined,
+      });
+    } catch {
+      checks.push({
+        code: "engine_missing",
+        level: "error",
+        message: `\`${parsed.command}\` is not runnable on this host`,
+        hint: `Install ${engine.label}, or set the Command field to its full path.`,
       });
     }
   } catch (e) {
@@ -153,20 +154,34 @@ export async function testEnvironment(
   // The classic silent misconfiguration: gate on the personal seat, spend on
   // the work one. The budget is then charged against a subscription other than
   // the one actually used, and every number downstream is wrong.
-  if (engineId === "claude" && !str(config.configDir)) {
-    checks.push({
-      code: "no_config_dir",
-      level: "warn",
-      message: "No `configDir` set — Claude will use whichever profile is default",
-      hint: "Set it to the profile matching the Overton account, e.g. ~/.claude-profiles/personal, so the seat you gate on is the seat you spend from.",
-    });
+  // The seat may be pinned either by the explicit field or by an env prefix on
+  // the command. Either is fine; NEITHER is the failure worth warning about.
+  const claudeSeat = str(config.configDir) ?? envPrefix.CLAUDE_CONFIG_DIR;
+  const codexSeat = str(config.codexHome) ?? envPrefix.CODEX_HOME;
+
+  if (engineId === "claude") {
+    if (claudeSeat) {
+      checks.push({
+        code: "seat_pinned",
+        level: "info",
+        message: `Claude profile pinned to ${claudeSeat}`,
+        detail: str(config.configDir) ? "from the profile field" : "from the command's env prefix",
+      });
+    } else {
+      checks.push({
+        code: "no_config_dir",
+        level: "warn",
+        message: "Claude will use whichever profile is default",
+        hint: "Set `Claude profile directory` to the profile matching the Overton account, e.g. ~/.claude-profiles/personal, so the seat you gate on is the seat you spend from.",
+      });
+    }
   }
-  if (engineId === "codex" && !str(config.codexHome)) {
+  if (engineId === "codex" && !codexSeat) {
     checks.push({
       code: "no_codex_home",
       level: "warn",
-      message: "No `codexHome` set — Codex will use its default profile",
-      hint: "Set it to the CODEX_HOME matching the Overton account.",
+      message: "Codex will use its default profile",
+      hint: "Set `Codex home` to the CODEX_HOME matching the Overton account.",
     });
   }
 
