@@ -297,8 +297,9 @@ stand.
 **v0.1 — working, and young.** Metering, attribution, allocation, gating,
 claims, CLI, HTTP and MCP all run against real accounts. 79 tests.
 
-A web deck ships with the daemon — accounts, allocation, and a form to add or
-remove projects — at `http://127.0.0.1:7787`.
+A web deck ships with the daemon at `http://127.0.0.1:7787` — accounts against
+the clock, and a slider per project for dividing each account's week, which
+shows what every other project's share becomes before anything is written.
 
 Not yet: attribution for spend on a machine other than the arbiter's — remote
 mode gates correctly there, but the transcripts are not on the arbiter's disk,

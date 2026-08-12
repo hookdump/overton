@@ -115,7 +115,8 @@ body {
 .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 20px 80px; }
 /* Everywhere a figure sits above or beside another one and has to be compared
    by eye rather than read as a word. */
-table, input, .tile-v, .win-meta, .card-foot, .alert-what, .stamp, .sub, .grp-roots {
+table, input, .tile-v, .win-meta, .card-foot, .alert-what, .stamp, .sub,
+.mix, .diff, .dial-v, .cap-key {
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,7 +291,6 @@ table.grid td.mono { font-family: var(--num); font-size: 12px; }
 }
 .grp-in { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .grp-name { font-family: var(--num); font-size: 13px; font-weight: 600; color: var(--ink); }
-.grp-roots { font-family: var(--num); font-size: 11px; color: var(--ink-3); overflow-wrap: anywhere; }
 .grp-in .spacer { margin-left: auto; }
 .acct-cell { font-family: var(--num); font-size: 12px; }
 
@@ -332,14 +332,128 @@ button.primary:hover { color: var(--accent-ink); opacity: .9; }
 button[aria-expanded=true] { border-color: var(--accent); color: var(--accent); }
 
 .add { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) auto; gap: 10px; align-items: end; padding: 12px 14px; }
-.add label, .weights label {
+.add label, .dial label, .field label {
   display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .11em;
   color: var(--ink-2); margin-bottom: 4px;
 }
-.weights { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 14px 12px; }
-.weights > div { font-family: var(--num); }
-.weights label { font-family: var(--ui); text-transform: none; letter-spacing: 0; font-size: 11px; }
-.weights input { width: 62px; }
+
+/* THE SPLIT --------------------------------------------------------------- */
+/* One panel per account, because the thing being divided is an account. A
+   project-major table can show a share; it cannot show that the shares on one
+   account are a single quantity being shared out, which is the fact the whole
+   section exists to make obvious. */
+.mixers { display: grid; gap: 12px; }
+.mix { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 12px 14px 12px; }
+.mix.flag { border-left: 3px solid var(--tone); padding-left: 12px; }
+.mix-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mix-name { font-family: var(--num); font-size: 14px; font-weight: 600; }
+.mix-head .spacer { margin-left: auto; }
+.mix-disp { font-family: var(--num); font-size: 11.5px; color: var(--ink-2); margin-top: 3px; }
+.mix-disp b { color: var(--ink); font-size: 13px; }
+.mix-note { color: var(--ink-3); font-size: 11.5px; margin: 7px 0 0; }
+
+/* Where all hundred points of the week go, drawn at the same scale as the pace
+   rule above it: the projects' slices, the capacity held back for a person, and
+   the headroom above the account's own stop that nobody may spend. */
+.cap {
+  display: flex; height: 18px; margin: 10px 0 5px; overflow: hidden;
+  background: var(--track); border: 1px solid var(--rule); border-radius: 2px;
+}
+/* The 2px divider is what actually separates one slice from the next, and it is
+   panel against accent, so the boundary survives any hue. The alternating tint
+   is a nicety on top of it, and which slice belongs to which project is answered
+   by lighting it from the row — never by asking anyone to match two colours. */
+.seg { flex: 0 0 auto; min-width: 0; box-shadow: inset -2px 0 0 var(--panel); }
+.seg:last-child { box-shadow: none; }
+.seg.p { background: var(--accent); }
+.seg.alt { background: var(--accent); background: color-mix(in srgb, var(--accent) 45%, var(--panel)); }
+.seg.res {
+  background: var(--panel-2);
+  background-image: repeating-linear-gradient(135deg, var(--tick) 0 3px, transparent 3px 7px);
+}
+/* Dispatchable and claimed by nobody. Only ever wide when no project names the
+   account or every one of them is at 0, and in both cases it must not look like
+   the headroom above the stop — those are opposite facts. */
+.seg.free { background: var(--track); box-shadow: inset 0 0 0 1px var(--mute-line), inset -2px 0 0 var(--panel); }
+.seg.head { background: var(--track); }
+.seg.lit { outline: 2px solid var(--clock); outline-offset: -2px; }
+.cap-key { display: flex; flex-wrap: wrap; gap: 2px 15px; font-size: 11px; color: var(--ink-2); }
+.cap-key i {
+  display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px;
+  border: 1px solid var(--rule); border-radius: 1px; font-style: normal;
+}
+.cap-key i.k-p { background: var(--accent); }
+.cap-key i.k-res {
+  background: var(--panel-2);
+  background-image: repeating-linear-gradient(135deg, var(--tick) 0 3px, transparent 3px 7px);
+}
+.cap-key i.k-head { background: var(--track); }
+.cap-key i.k-free { background: var(--track); box-shadow: inset 0 0 0 1px var(--mute-line); }
+
+.dials {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 20px;
+  margin-top: 10px; padding: 10px 0; border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2);
+}
+.dial-in { display: flex; align-items: center; gap: 10px; }
+.dial-v { font-family: var(--num); font-size: 12px; min-width: 3.6em; text-align: right; }
+.dial-why { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+
+.mixrow {
+  display: grid; grid-template-columns: minmax(110px, 1.05fr) minmax(120px, 2.3fr) auto auto;
+  gap: 3px 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--rule-2);
+}
+.mixrow:last-of-type { border-bottom: 0; }
+.mixrow-name { font-size: 12.5px; overflow-wrap: anywhere; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.mixrow-name b { font-family: var(--num); font-weight: 600; }
+.mixrow-num { font-family: var(--num); font-size: 12px; text-align: right; white-space: nowrap; min-width: 6.6em; }
+.mixrow-num b { font-size: 13px; font-weight: 600; }
+.mixrow-num .sub { display: block; }
+/* A zero is a denial somebody typed, not a very small share, and the gate
+   answers "deny" for it. It gets the word and the tone that says so. */
+.mixrow.zero .mixrow-num b { color: var(--bad); }
+.mixrow.gone { opacity: .6; }
+.mixrow.gone .mixrow-name b { text-decoration: line-through; }
+.mix-more { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-top: 9px; font-size: 11.5px; color: var(--ink-3); }
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none; -moz-appearance: none;
+  width: 100%; height: 20px; margin: 0; padding: 0; background: transparent; cursor: pointer;
+  accent-color: var(--accent);
+}
+/* The filled portion is a gradient driven by --v, and --v is written in the one
+   place that writes .value, so the paint and the number beside it cannot drift. */
+input[type=range]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px; border: 1px solid var(--rule);
+  background: linear-gradient(90deg,
+    var(--accent) 0 calc(var(--v, 0) * 100%), var(--track) calc(var(--v, 0) * 100%) 100%);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 15px; height: 15px; margin-top: -5.5px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--accent);
+}
+input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; border: 1px solid var(--rule); background: var(--track); }
+input[type=range]::-moz-range-progress { height: 6px; border-radius: 3px 0 0 3px; background: var(--accent); }
+input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+input[type=range]:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Nothing is written until this appears and someone reads it. */
+.pending {
+  margin-top: 11px; padding: 9px 11px; border-radius: 3px;
+  border: 1px solid var(--warn-line); background: var(--warn-bg);
+}
+.pending-h { font-size: 11.5px; color: var(--warn); font-weight: 600; }
+.pending-w { font-size: 11.5px; color: var(--ink-2); margin-top: 3px; }
+.diff { font-size: 11.5px; color: var(--ink-2); margin-top: 6px; }
+.diff div { display: flex; align-items: baseline; gap: 8px; padding: 1px 0; }
+.diff .who { min-width: 11ch; color: var(--ink); }
+.diff .mk { color: var(--ink-3); }
+.diff b { color: var(--ink); font-weight: 600; }
+.pending-act { display: flex; gap: 8px; margin-top: 9px; align-items: center; flex-wrap: wrap; }
+
+.field { padding: 9px 0 2px; }
+.field-in { display: flex; gap: 8px; align-items: center; }
+.grp .field label { margin-bottom: 3px; }
 
 /* legend and footer ------------------------------------------------------- */
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 9px 2px 0; }
@@ -367,6 +481,10 @@ button[aria-expanded=true] { border-color: var(--accent); color: var(--accent); 
   .add { grid-template-columns: 1fr; }
   .alert { grid-template-columns: 14px minmax(0, 1fr); }
   .alert .alert-act { grid-column: 2; justify-self: start; }
+  /* The slider needs a whole line before it needs a neighbour: a 90px track is
+     not a control anyone can aim at. */
+  .mixrow { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .mixrow-slider { grid-column: 1 / -1; order: 3; }
   /* The table still scrolls in its own box; dropping the two columns a phone
      can least use just shortens how far. */
   .hide-sm { display: none; }
@@ -657,6 +775,29 @@ function renderAttention() {
     });
   }
 
+  // A project can be perfectly configured, gate green on every pairing, and
+  // still be incapable of spending a point — no roots means nothing is ever
+  // attributed to it, no account means it can never dispatch. Neither shows up
+  // as a verdict, because neither produces a pairing to rule on, so both would
+  // be invisible on a page built only from decisions.
+  for (const [id, p] of Object.entries(DATA.config.projects || {})) {
+    if (p.enabled === false) continue;
+    if (!(p.roots || []).length) {
+      rows.push({
+        sev: 2, tone: "warn", mk: "?", who: esc(id), lead: "no roots",
+        what: "no directory is declared, so no work will ever be attributed to it",
+        act: '<button class="quiet" data-act="focus-roots" data-project="' + esc(id) + '">set directories</button>',
+      });
+    }
+    if (!Object.keys(p.accounts || {}).length) {
+      rows.push({
+        sev: 2, tone: "warn", mk: "?", who: esc(id), lead: "names no account",
+        what: "it can never dispatch anywhere until it has a share of one",
+        act: '<button class="quiet" data-act="goto-split">give it a share</button>',
+      });
+    }
+  }
+
   for (const x of pairings()) {
     if (x.a.verdict === "go") continue;
     const v = VERDICTS[x.a.verdict];
@@ -803,6 +944,488 @@ function renderLedger(a) {
       'first observed; a <em>widening</em> gap means a source Overton cannot see.</p>');
 }
 
+// ---------------------------------------------------------------------------
+// the split: one account, divided
+// ---------------------------------------------------------------------------
+
+/**
+ * Mirrors normalisedShare() in the core, weekly window only.
+ *
+ * A weight over the sum of the weights of every ENABLED project naming the
+ * account. Disabled projects hold a weight but do not compete, so counting them
+ * would dilute everyone against a project that cannot spend a point.
+ *
+ * This is the only place the deck divides anything. It is deliberately NOT the
+ * same code path as the allocation table, which prints the gate's own sharePct:
+ * if the two ever disagree, the disagreement is a real bug and should be
+ * visible on the page rather than hidden by a shared function.
+ */
+function weightsOn(accountId) {
+  const out = {};
+  const cfg = DATA.config.projects || {};
+  for (const id of Object.keys(cfg)) {
+    const p = cfg[id] || {};
+    if (p.enabled === false) continue;
+    const pa = (p.accounts || {})[accountId];
+    if (!pa) continue;
+    out[id] = pa.weekly_share == null ? 1 : pa.weekly_share;
+  }
+  return out;
+}
+
+/** Weights to percentages. A total of zero is not a division by zero: it is
+    every project denied, which is exactly what the allocator returns for it. */
+function normalise(weights) {
+  let total = 0;
+  for (const id of Object.keys(weights)) total += weights[id];
+  const out = {};
+  for (const id of Object.keys(weights)) out[id] = total > 0 ? (weights[id] / total) * 100 : 0;
+  return out;
+}
+
+function cfgNum(o, k, dflt) { const v = o[k]; return typeof v === "number" && isFinite(v) ? v : dflt; }
+
+/** dispatchablePool(): the account's own stop, less what is held back for a person. */
+function poolOf(target, reserve) { return Math.max(0, target - reserve); }
+
+/** Integers summing to exactly the requested total, by largest remainder. */
+function distribute(exact, total) {
+  const ids = Object.keys(exact);
+  const out = {}, rem = [];
+  let sum = 0;
+  for (const id of ids) {
+    const f = Math.floor(exact[id]);
+    out[id] = f; sum += f; rem.push([id, exact[id] - f]);
+  }
+  rem.sort((a, b) => b[1] - a[1]);
+  for (let i = 0; sum < total && rem.length; i++) { out[rem[i % rem.length][0]] += 1; sum += 1; }
+  return out;
+}
+
+/**
+ * The current split as whole percentages that sum to 100.
+ *
+ * Whole percentages are what makes this panel honest: written back as weights
+ * they sum to 100, so normalisation becomes the identity and the number someone
+ * drags is the number they get. Anything else and the label and the allocation
+ * drift apart, which is the entire class of bug this panel exists to end.
+ */
+function round100(exact) {
+  const ids = Object.keys(exact);
+  if (!ids.length) return {};
+  let sum = 0;
+  for (const id of ids) sum += exact[id];
+  // Everyone at zero is a real, expressible state — nobody may spend here — and
+  // must not be rounded into an allocation nobody asked for.
+  if (sum <= 0) { const z = {}; for (const id of ids) z[id] = 0; return z; }
+  const out = distribute(exact, 100);
+  // A project with any weight at all keeps at least one point. Zero is a denial
+  // somebody typed and the gate answers "deny" for it, so rounding a project
+  // into one is precisely the silent starvation this panel is here to prevent.
+  for (const id of ids) {
+    if (out[id] !== 0 || exact[id] <= 0) continue;
+    let big = null;
+    for (const j of ids) if (out[j] > 1 && (big == null || out[j] > out[big])) big = j;
+    if (big == null) break;
+    out[big] -= 1; out[id] += 1;
+  }
+  return out;
+}
+
+/**
+ * Move one slider; everybody else moves too.
+ *
+ * Weights are normalised, so what one project gains another loses — there is no
+ * such thing as changing one share. The remainder is split in proportion to
+ * what each project already had, and a project pinned at 0 stays at 0.
+ */
+function redistribute(vec, movedId, want) {
+  const ids = Object.keys(vec);
+  const others = ids.filter((i) => i !== movedId);
+  let sumOthers = 0;
+  for (const i of others) sumOthers += vec[i];
+  if (sumOthers <= 0) {
+    // Nobody else is competing, so normalisation hands this project the whole
+    // pool whatever the slider says. Holding capacity back is the reserve's
+    // job; a weight cannot express it.
+    const out = {};
+    for (const i of ids) out[i] = 0;
+    out[movedId] = 100;
+    return { vec: out, clamped: true };
+  }
+  const target = Math.max(0, Math.min(100, Math.round(want)));
+  const scaled = {};
+  for (const i of others) scaled[i] = (vec[i] * (100 - target)) / sumOthers;
+  const out = distribute(scaled, 100 - target);
+  out[movedId] = target;
+  return { vec: out, clamped: false };
+}
+
+/* Drafts are INTENT, never config: nothing in this section touches the file
+   until Apply, so a redistribution can be looked at before it happens rather
+   than explained after it has. */
+let drafts = {};
+
+/** The set of projects competing on an account, as a key: if config changes
+    under an open draft the draft describes a world that no longer exists. */
+function sigOf(accountId) { return JSON.stringify(Object.keys(weightsOn(accountId)).sort()); }
+
+function draftOf(accountId, create) {
+  const d = drafts[accountId];
+  if (d && d.sig !== sigOf(accountId)) delete drafts[accountId];
+  if (drafts[accountId]) return drafts[accountId];
+  if (!create) return null;
+  drafts[accountId] = {
+    sig: sigOf(accountId),
+    shares: round100(normalise(weightsOn(accountId))),
+    drop: {},
+    target: null,
+    reserve: null,
+  };
+  return drafts[accountId];
+}
+
+/** Everything one panel draws, committed and proposed side by side. */
+function splitState(accountId) {
+  const acfg = accountCfg(accountId);
+  const av = DATA.accounts.find((x) => x.accountId === accountId) || null;
+  const d = draftOf(accountId, false);
+  const committed = normalise(weightsOn(accountId));
+  const wasTarget = cfgNum(acfg, "weekly_target_pct", 85);
+  const wasReserve = cfgNum(acfg, "interactive_reserve_pct", 0);
+  const target = d && d.target != null ? d.target : wasTarget;
+  // A reserve above the stop would leave a negative pool, which the allocator
+  // clamps to zero — so the slider is clamped instead, where it can be seen.
+  const reserve = Math.min(d && d.reserve != null ? d.reserve : wasReserve, target);
+  return {
+    acfg, av, d, committed,
+    shares: d ? d.shares : round100(committed),
+    target, reserve, pool: poolOf(target, reserve),
+    wasTarget, wasReserve, wasPool: poolOf(wasTarget, wasReserve),
+    // Points are only a real quantity where there is a window to spend them
+    // from; on an unmetered or disabled account they would be arithmetic about
+    // nothing.
+    gated: !!av && av.enabled && av.metered,
+  };
+}
+
+function verdictOf(projectId, accountId) {
+  const p = DATA.projects.find((x) => x.projectId === projectId);
+  if (!p) return null;
+  return p.accounts.find((a) => a.accountId === accountId) || null;
+}
+
+function panelFor(accountId) {
+  return Array.prototype.find.call(document.querySelectorAll("[data-mix]"), (el) => el.dataset.mix === accountId) || null;
+}
+function each(root, sel, fn) { Array.prototype.forEach.call(root.querySelectorAll(sel), fn); }
+
+/** One decimal, but only where a decimal is saying something. */
+function share1(v) {
+  if (v == null || !isFinite(v)) return "—";
+  return (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1)) + "%";
+}
+
+function renderSplit() {
+  const ids = Object.keys(DATA.config.accounts || {});
+  const host = $("#split");
+  if (!ids.length) {
+    host.innerHTML = '<div class="panel"><div class="empty">No accounts configured. Accounts are declared in <code>config.yaml</code>; there is nothing to divide until one exists.</div></div>';
+    return;
+  }
+  host.innerHTML = ids.map(mixPanel).join("");
+  for (const id of ids) paintSplit(id);
+}
+
+function mixPanel(accountId, idx) {
+  const s = splitState(accountId);
+  const st = s.av ? accountState(s.av) : { tone: "mute", mk: "?", text: "not configured", why: "" };
+  const order = Object.keys(s.shares).sort((a, b) =>
+    (s.committed[b] || 0) - (s.committed[a] || 0) || (a < b ? -1 : a > b ? 1 : 0));
+  const dropped = s.d ? Object.keys(s.d.drop) : [];
+  const cfgP = DATA.config.projects || {};
+  const absent = Object.keys(cfgP).filter((p) =>
+    cfgP[p].enabled !== false && !(p in s.shares) && dropped.indexOf(p) < 0);
+  const parked = Object.keys(cfgP).filter((p) => cfgP[p].enabled === false && (cfgP[p].accounts || {})[accountId]);
+
+  const segs = order.map((pid, i) =>
+      '<span class="seg p' + (i % 2 ? " alt" : "") + '" data-seg-for="' + esc(pid) +
+      '" title="' + esc(pid) + '"></span>').join("") +
+    '<span class="seg free" data-seg-free title="dispatchable, and allocated to nobody"></span>' +
+    '<span class="seg res" data-seg-res title="held back for your own interactive work"></span>' +
+    '<span class="seg head" data-seg-head title="above the account stop — nobody spends here"></span>';
+
+  const rows = order.length
+    ? order.map((pid, i) => mixRow(s, accountId, pid, idx, i)).join("")
+    : '<div class="empty" style="padding:12px 0 4px">No project names this account, so none of its capacity is allocated. Give one a share below.</div>';
+
+  return '<article class="mix t-' + st.tone + (st.tone === "warn" || st.tone === "bad" ? " flag" : "") +
+      '" data-mix="' + esc(accountId) + '" aria-labelledby="mx' + idx + '">' +
+    '<div class="mix-head">' +
+      '<span class="mix-name" id="mx' + idx + '">' + esc(accountId) + '</span>' +
+      '<span class="chip">' + esc(s.acfg.provider || "?") + '</span>' +
+      (s.av && s.av.plan ? '<span class="chip">' + esc(s.av.plan) + '</span>' : "") +
+      '<span class="spacer"></span>' + pill(st.tone, st.mk, st.text, st.why) +
+    '</div>' +
+    '<div class="mix-disp"><b data-pool>—</b> <span data-pool-sub></span></div>' +
+    '<div class="cap" role="img" data-cap aria-label="the split of this account">' + segs + '</div>' +
+    '<div class="cap-key">' +
+      '<span><i class="k-p"></i>allocated to projects</span>' +
+      '<span><i class="k-res"></i>held back for you</span>' +
+      '<span data-key-free hidden><i class="k-free"></i>allocated to nobody</span>' +
+      '<span><i class="k-head"></i>above the account stop</span>' +
+    '</div>' +
+    dials(s, accountId, idx) +
+    rows +
+    dropped.map((pid) => goneRow(accountId, pid)).join("") +
+    (absent.length
+      ? '<div class="mix-more">not named here: ' + absent.map((p) =>
+          '<button class="quiet" data-act="include" data-account="' + esc(accountId) + '" data-project="' + esc(p) +
+          '" title="give ' + esc(p) + ' a share of this account">+ ' + esc(p) + '</button>').join(" ") + '</div>'
+      : "") +
+    (parked.length
+      ? '<div class="mix-more">disabled, so not competing: ' + esc(parked.join(", ")) + '</div>'
+      : "") +
+    '<div data-pending></div>' +
+  '</article>';
+}
+
+function dials(s, accountId, idx) {
+  return '<div class="dials">' +
+    '<div class="dial">' +
+      '<label for="dt' + idx + '">Account stop · 7 days</label>' +
+      '<div class="dial-in">' +
+        '<input type="range" id="dt' + idx + '" min="0" max="100" step="1" data-act="target" data-account="' + esc(accountId) + '">' +
+        '<span class="dial-v" data-target-v>—</span>' +
+      '</div>' +
+      '<div class="dial-why">No project may spend past this, whatever its share.</div>' +
+    '</div>' +
+    '<div class="dial">' +
+      '<label for="dr' + idx + '">Held back for you</label>' +
+      '<div class="dial-in">' +
+        '<input type="range" id="dr' + idx + '" min="0" max="100" step="1" data-act="reserve" data-account="' + esc(accountId) + '">' +
+        '<span class="dial-v" data-reserve-v>—</span>' +
+      '</div>' +
+      '<div class="dial-why">Never dispatchable to an agent. This is the only way to leave capacity unallocated — weights always divide the whole of what is left.</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function mixRow(s, accountId, projectId, idx, i) {
+  const v = verdictOf(projectId, accountId);
+  const roots = ((DATA.config.projects || {})[projectId] || {}).roots || [];
+  const zero = (s.shares[projectId] || 0) <= 0;
+  return '<div class="mixrow' + (zero ? " zero" : "") + '" data-row-for="' + esc(projectId) + '">' +
+    '<label class="mixrow-name" for="sl' + idx + '-' + i + '"><b>' + esc(projectId) + '</b>' +
+      (roots.length ? "" : pill("warn", "?", "no roots", "nothing will ever be attributed to it, so its share cannot be spent")) +
+      (v && v.verdict !== "go" ? verdictPill(v.verdict, v.retryAfterSec) : "") +
+    '</label>' +
+    '<div class="mixrow-slider">' +
+      '<input type="range" id="sl' + idx + '-' + i + '" min="0" max="100" step="1" data-act="share" ' +
+      'data-account="' + esc(accountId) + '" data-project="' + esc(projectId) + '"></div>' +
+    '<div class="mixrow-num"><b data-pct-for="' + esc(projectId) + '">—</b>' +
+      '<span class="sub" data-pts-for="' + esc(projectId) + '">—</span></div>' +
+    '<div><button class="quiet danger" data-act="unname" data-account="' + esc(accountId) + '" data-project="' + esc(projectId) +
+      '" title="take ' + esc(projectId) + ' off this account entirely">×</button></div>' +
+  '</div>';
+}
+
+function goneRow(accountId, projectId) {
+  return '<div class="mixrow gone"><span class="mixrow-name"><b>' + esc(projectId) + '</b></span>' +
+    '<span class="sub">will be taken off this account</span>' +
+    '<span class="mixrow-num">—</span>' +
+    '<div><button class="quiet" data-act="keep" data-account="' + esc(accountId) + '" data-project="' + esc(projectId) + '">undo</button></div>' +
+  '</div>';
+}
+
+/* value and --v are written together and nowhere else, so the fill painted
+   behind the thumb and the number printed beside it cannot drift apart. */
+function setSlider(el, v, max) {
+  if (!el) return;
+  const top = max == null ? Number(el.max) || 100 : max;
+  if (max != null) el.max = String(max);
+  if (Number(el.value) !== v) el.value = String(v);
+  el.style.setProperty("--v", (top > 0 ? clamp01(v / top) : 0).toFixed(4));
+}
+
+/**
+ * Repaint one panel's numbers in place.
+ *
+ * In place, and not by rebuilding the panel, because this runs on every pixel
+ * of a drag: an innerHTML rewrite would take the focus off the slider under the
+ * pointer and end the gesture.
+ */
+function paintSplit(accountId) {
+  const panel = panelFor(accountId);
+  if (!panel) return;
+  const s = splitState(accountId);
+  const shown = (pid) => (s.d ? s.shares[pid] : s.committed[pid]);
+  const points = (pid) => s.pool * (shown(pid) || 0) / 100;
+
+  each(panel, "[data-act=share]", (el) => {
+    const pid = el.dataset.project;
+    if (s.shares[pid] == null) return;
+    setSlider(el, s.shares[pid]);
+    // The spoken value is the printed value, to the same precision: two
+    // readings of one number is two numbers.
+    el.setAttribute("aria-valuetext", share1(shown(pid)) + " of " + accountId +
+      (s.gated ? ", " + pts(points(pid)) + " points" : ", which is not gated"));
+  });
+  each(panel, "[data-pct-for]", (el) => {
+    const pid = el.dataset.pctFor;
+    el.textContent = s.d ? s.shares[pid] + "%" : share1(s.committed[pid]);
+  });
+  each(panel, "[data-pts-for]", (el) => {
+    const pid = el.dataset.ptsFor;
+    el.textContent = (shown(pid) || 0) <= 0 ? "denied"
+      : s.gated ? pts(points(pid)) + " pts" : "not gated";
+  });
+  each(panel, "[data-row-for]", (el) => {
+    el.classList.toggle("zero", (shown(el.dataset.rowFor) || 0) <= 0);
+  });
+
+  each(panel, "[data-seg-for]", (el) => {
+    const w = s.pool * (shown(el.dataset.segFor) || 0) / 100;
+    el.style.display = w > 0 ? "" : "none";
+    el.style.flexBasis = w.toFixed(4) + "%";
+  });
+  // Whatever the projects did not take. Normalisation means this is zero
+  // except when nobody is competing at all, which is precisely the state that
+  // must not be mistaken for the headroom above the stop.
+  let claimed = 0;
+  for (const pid of Object.keys(s.shares)) claimed += s.pool * (shown(pid) || 0) / 100;
+  const free = Math.max(0, s.pool - claimed);
+  const freeSeg = panel.querySelector("[data-seg-free]");
+  freeSeg.style.display = free > 0.001 ? "" : "none";
+  freeSeg.style.flexBasis = free.toFixed(4) + "%";
+  panel.querySelector("[data-key-free]").hidden = !(free > 0.001);
+
+  const res = panel.querySelector("[data-seg-res]");
+  res.style.display = s.reserve > 0 ? "" : "none";
+  res.style.flexBasis = s.reserve.toFixed(4) + "%";
+  const head = panel.querySelector("[data-seg-head]");
+  const above = Math.max(0, 100 - s.target);
+  head.style.display = above > 0 ? "" : "none";
+  head.style.flexBasis = above.toFixed(4) + "%";
+  const nprojects = Object.keys(s.shares).filter((pid) => (shown(pid) || 0) > 0).length;
+  panel.querySelector("[data-cap]").setAttribute("aria-label",
+    pts(s.pool) + " points to divide: " + pts(claimed) + " allocated across " +
+    nprojects + (nprojects === 1 ? " project" : " projects") +
+    (free > 0.001 ? ", " + pts(free) + " allocated to nobody" : "") +
+    ", " + s.reserve + " points held back for interactive work, " +
+    above + " points above the account stop");
+
+  const tEl = panel.querySelector("[data-act=target]");
+  setSlider(tEl, s.target, 100);
+  tEl.setAttribute("aria-valuetext", s.target + "% of the plan window — the account stop");
+  const rEl = panel.querySelector("[data-act=reserve]");
+  setSlider(rEl, s.reserve, s.target || 100);
+  rEl.setAttribute("aria-valuetext",
+    s.reserve + "% held back, leaving " + (s.gated ? pts(s.pool) + " points" : s.pool + "%") + " to divide");
+  panel.querySelector("[data-target-v]").textContent = s.target + "%";
+  panel.querySelector("[data-reserve-v]").textContent = s.reserve + "%";
+  panel.querySelector("[data-pool]").textContent = s.gated ? pts(s.pool) + " pts" : s.pool + "%";
+  panel.querySelector("[data-pool-sub]").textContent =
+    "to divide — the " + s.target + "% stop less the " + s.reserve + "% you keep" +
+    (s.gated ? "" : " · this account is not gated, so the split has no effect today");
+
+  panel.querySelector("[data-pending]").innerHTML = pendingBlock(accountId);
+}
+
+/**
+ * The redistribution, before it happens.
+ *
+ * Someone once added a project at weight 2 and took another from 63% of an
+ * account to 18% without a single number on the page moving to say so. This is
+ * that number, for every project the edit touches, in the points the gate
+ * actually compares against.
+ */
+function pendingBlock(accountId) {
+  const s = splitState(accountId);
+  if (!s.d) return "";
+  const ids = Object.keys(s.shares).concat(Object.keys(s.d.drop))
+    .sort((a, b) => (s.committed[b] || 0) - (s.committed[a] || 0) || (a < b ? -1 : a > b ? 1 : 0));
+  const rows = [];
+  for (const pid of ids) {
+    const before = s.committed[pid] == null ? null : s.committed[pid];
+    const after = s.d.drop[pid] ? null : s.shares[pid];
+    const bp = before == null ? null : s.wasPool * before / 100;
+    const ap = after == null ? null : s.pool * after / 100;
+    if (before != null && after != null && Math.abs(before - after) < 0.05 && Math.abs((bp || 0) - (ap || 0)) < 0.05) continue;
+    // The arrow follows the POINTS, not the percentage. Raising an account's
+    // reserve leaves every share exactly where it was and still takes points
+    // off everyone, and an arrow pointing up through that would be describing
+    // the label rather than the consequence.
+    const bcmp = s.gated ? bp : before, acmp = s.gated ? ap : after;
+    const mk = after == null ? "×" : before == null ? "+"
+      : acmp > bcmp + 0.005 ? UP : acmp < bcmp - 0.005 ? DOWN : LEVEL;
+    rows.push('<div><span class="who">' + esc(pid) + '</span><span class="mk" aria-hidden="true">' + mk + '</span>' +
+      '<span>' + (before == null ? "not named" : share1(before) + (s.gated ? " · " + pts(bp) + " pts" : "")) +
+      ' → <b>' + (after == null ? "taken off this account"
+        : after + "%" + (s.gated ? " · " + pts(ap) + " pts" : "") + (after <= 0 ? " · denied" : "")) + '</b></span></div>');
+  }
+  if (s.target !== s.wasTarget) {
+    rows.push('<div><span class="who">account stop</span><span class="mk" aria-hidden="true">' +
+      (s.target > s.wasTarget ? UP : DOWN) + '</span><span>' + s.wasTarget + '% → <b>' + s.target + '%</b></span></div>');
+  }
+  if (s.reserve !== s.wasReserve) {
+    rows.push('<div><span class="who">held back</span><span class="mk" aria-hidden="true">' +
+      (s.reserve > s.wasReserve ? UP : DOWN) + '</span><span>' + s.wasReserve + '% → <b>' + s.reserve +
+      '%</b> · ' + pts(s.wasPool) + ' → ' + pts(s.pool) + ' pts to divide</span></div>');
+  }
+  if (!rows.length) return "";
+
+  return '<div class="pending" role="group" aria-label="pending changes to ' + esc(accountId) + '">' +
+    '<div class="pending-h">Not written yet — this is what applying would do</div>' +
+    '<div class="pending-w">Shares are written back as whole percentages summing to 100, so the number on the slider is the share the gate uses.</div>' +
+    '<div class="diff">' + rows.join("") + '</div>' +
+    '<div class="pending-act">' +
+      '<button class="primary" data-act="apply-split" data-account="' + esc(accountId) + '">Apply to ' + esc(accountId) + '</button>' +
+      '<button data-act="cancel-split" data-account="' + esc(accountId) + '">Discard</button>' +
+    '</div></div>';
+}
+
+/**
+ * Write the draft.
+ *
+ * SEQUENTIALLY, and this is not a style choice: every config route re-reads
+ * config.yaml, edits the document and saves the whole file, so two writes in
+ * flight at once would have the second overwrite the first.
+ */
+async function applySplit(accountId) {
+  const s = splitState(accountId);
+  if (!s.d) return;
+  const w = weightsOn(accountId);
+  const writes = [];
+  const patch = {};
+  if (s.target !== s.wasTarget) patch.weekly_target_pct = s.target;
+  if (s.reserve !== s.wasReserve) patch.interactive_reserve_pct = s.reserve;
+  if (Object.keys(patch).length) writes.push(["PATCH", "/v1/config/accounts/" + encodeURIComponent(accountId), patch]);
+  for (const pid of Object.keys(s.shares)) {
+    if (w[pid] === s.shares[pid]) continue;
+    writes.push(["PUT", "/v1/config/projects/" + encodeURIComponent(pid) + "/accounts/" + encodeURIComponent(accountId),
+      { weight: s.shares[pid] }]);
+  }
+  for (const pid of Object.keys(s.d.drop)) {
+    writes.push(["DELETE", "/v1/config/projects/" + encodeURIComponent(pid) + "/accounts/" + encodeURIComponent(accountId), null]);
+  }
+  if (!writes.length) { delete drafts[accountId]; render(); return; }
+
+  let done = 0;
+  try {
+    for (const wr of writes) { await api(wr[0], wr[1], wr[2]); done += 1; }
+    delete drafts[accountId];
+    await afterEdit(accountId + " divided: " + writes.length + " change" + (writes.length === 1 ? "" : "s") + " written");
+  } catch (err) {
+    // Partly written is the honest report. The draft goes, because the config
+    // it described is no longer the config on disk.
+    delete drafts[accountId];
+    await refresh();
+    render();
+    flash(done + " of " + writes.length + " changes were written, then: " + err.message, true);
+  }
+}
+
 /** Config is the source of truth for which projects exist — projectViews
     omits the disabled ones, and a project that silently vanishes from the deck
     when someone toggles it in the YAML is worse than one shown greyed out. */
@@ -824,19 +1447,26 @@ function renderAlloc() {
   const out = [];
   for (const p of projectRows()) {
     const roots = (p.cfg.roots || []);
+    const accountIds = Object.keys(p.cfg.accounts || {});
+    // The two ways a project can exist and still be incapable of anything. Both
+    // are silent in the config file and both look exactly like a working
+    // project from every other angle, so they are said out loud here.
+    const broken =
+      (roots.length ? "" : pill("warn", "?", "no roots", "no directory is declared, so no work can ever be attributed to it — its share cannot be spent")) +
+      (accountIds.length ? "" : pill("warn", "?", "no account", "it names no account, so it can never dispatch anywhere"));
     out.push('<tr class="grp"><th colspan="9" scope="rowgroup"><div class="grp-in">' +
       '<span class="grp-name">' + esc(p.id) + '</span>' +
       (p.enabled ? "" : pill("mute", "×", "disabled", "not allocated, and its weights do not dilute anyone else's share")) +
-      '<span class="grp-roots">' + (roots.length ? esc(roots.join("  ")) : "no roots — nothing will be attributed to it") + '</span>' +
+      broken +
       '<span class="spacer"></span>' +
       '<button class="quiet" data-act="toggle" data-project="' + esc(p.id) + '" data-to="' + (p.enabled ? "0" : "1") + '">' +
         (p.enabled ? "disable" : "enable") + '</button>' +
       '<button class="quiet danger" data-act="rm" data-project="' + esc(p.id) + '">remove</button>' +
-      '</div></th></tr>');
+      '</div>' + rootsField(p.id, roots) + '</th></tr>');
 
-    const accountIds = Object.keys(p.cfg.accounts || {});
     if (!p.view && !accountIds.length) {
-      out.push('<tr><td colspan="9" class="empty">No account named, so this project may not spend anywhere. Give it a weight below.</td></tr>');
+      out.push('<tr><td colspan="9" class="empty">No account named, so this project may not spend anywhere. ' +
+        '<button class="quiet" data-act="goto-split">give it a share of an account</button></td></tr>');
       continue;
     }
 
@@ -856,18 +1486,37 @@ function renderAlloc() {
     '<tr><td colspan="9" class="empty">No projects yet. Add one below to start allocating.</td></tr>';
 }
 
-/** A pairing the gate has no opinion about, but whose weight is still editable:
-    the weight is what makes it gateable again, so it must show the real one. */
+/**
+ * Directories, editable where they are read.
+ *
+ * A project whose roots are wrong is a project nothing is charged to, and until
+ * now the only cure was the CLI — the deck could show the fault and not fix it,
+ * which is the worst of both. Committed on Enter or on "save", never on blur:
+ * a path is too easy to lose to a stray click somewhere else on the page.
+ */
+function rootsField(projectId, roots) {
+  const v = roots.join(", ");
+  return '<div class="field"><label for="rt-' + esc(projectId) + '">Directories — work under these is charged here, longest root first</label>' +
+    '<div class="field-in">' +
+      '<input type="text" id="rt-' + esc(projectId) + '" value="' + esc(v) + '" data-act="roots" data-project="' + esc(projectId) +
+      '" data-orig="' + esc(v) + '" placeholder="~/Projects/thing, ~/Work/other">' +
+      '<button class="quiet" data-act="save-roots" data-project="' + esc(projectId) + '" disabled>save</button>' +
+    '</div></div>';
+}
+
+/** A pairing the gate has no opinion about. The weight is still worth showing:
+    it is what the pairing becomes the moment the account is enabled again. */
 function ungatedRow(p, accountId, why) {
   const weight = (p.cfg.accounts[accountId] || {}).weekly_share;
-  return '<tr><td class="acct-cell">' + esc(accountId) + '</td>' + weightCell(p.id, accountId, weight) +
+  return '<tr><td class="acct-cell">' + esc(accountId) + '</td>' + weightCell(weight) +
     '<td colspan="7" class="empty" style="padding:8px 10px">' + esc(why) + '</td></tr>';
 }
 
-function weightCell(projectId, accountId, weight) {
-  return '<td class="n"><input type="number" min="0" step="0.05" value="' + (weight == null ? 1 : weight) +
-    '" data-act="weight" data-project="' + esc(projectId) + '" data-account="' + esc(accountId) +
-    '" aria-label="weight for ' + esc(projectId) + ' on ' + esc(accountId) + '"></td>';
+/* Read-only, and labelled as a weight rather than left as a bare number. It is
+   edited in The split, where the consequence of changing it — every other
+   project on the account moving — can be seen while it is being decided. */
+function weightCell(weight) {
+  return '<td class="n">' + (weight == null ? 1 : weight) + '</td>';
 }
 
 function allocRow(projectId, a) {
@@ -904,15 +1553,13 @@ function allocRow(projectId, a) {
 
   return '<tr>' +
     '<td class="acct-cell">' + esc(a.accountId) + '</td>' +
-    weightCell(projectId, a.accountId, a.weight) +
-    '<td class="n hide-sm">' + pct(a.sharePct) + '</td>' +
+    weightCell(a.weight) +
+    '<td class="n hide-sm">' + share1(a.sharePct) + '</td>' +
     middle +
     '<td class="n">' + verdictPill(a.verdict, a.retryAfterSec) + '</td>' +
     '<td class="n"><button class="quiet" data-act="why" data-project="' + esc(projectId) + '" data-account="' + esc(a.accountId) + '"' +
       (panels.why && panels.why.project === projectId && panels.why.account === a.accountId ? ' aria-expanded="true"' : "") +
-      '>why</button>' +
-      '<button class="quiet danger" data-act="revoke" data-project="' + esc(projectId) + '" data-account="' + esc(a.accountId) +
-      '" title="stop this project from using this account at all">×</button></td>' +
+      '>why</button></td>' +
   '</tr>' + whyRow(projectId, a.accountId);
 }
 
@@ -960,20 +1607,43 @@ function renderClaims() {
     }).join("") + '</tbody></table></div>';
 }
 
-/** Rebuilt only when the set of accounts changes, so a poll never clobbers a
-    number someone is halfway through typing. */
-function renderAddWeights() {
-  const cfg = DATA.config.accounts || {};
-  const ids = Object.keys(cfg).filter((id) => cfg[id].enabled !== false);
-  const host = $("#add-weights");
-  const key = ids.join("\u0000");
-  if (host.dataset.key === key) return;
-  host.dataset.key = key;
-  host.innerHTML = ids.length
-    ? ids.map((id) =>
-        '<div><label for="w-' + esc(id) + '">' + esc(id) + '</label>' +
-        '<input type="number" min="0" step="0.05" value="0" id="w-' + esc(id) + '" data-add-account="' + esc(id) + '"></div>').join("")
-    : '<div class="empty" style="padding:0">No enabled accounts. Add one to <code>config.yaml</code> first.</div>';
+/**
+ * The name field offers the projects that already exist, and the form's verb
+ * changes to match what submitting will actually do.
+ *
+ * A form that can only ever ADD sends someone to the CLI the first time they
+ * want to move a directory, which is exactly what happened. Typing a name that
+ * exists updates that project instead of failing, and the button says so before
+ * the submit rather than an error saying it afterwards.
+ */
+function renderProjectForm() {
+  const ids = Object.keys(DATA.config.projects || {});
+  const host = $("#project-names");
+  const key = JSON.stringify(ids);
+  if (host.dataset.key !== key) {
+    host.dataset.key = key;
+    host.innerHTML = ids.map((id) => '<option value="' + esc(id) + '"></option>').join("");
+  }
+  syncProjectForm();
+}
+
+function syncProjectForm() {
+  const id = $("#add-id").value.trim();
+  const existing = !!(DATA.config.projects || {})[id];
+  $("#add-submit").textContent = existing ? "Update " + id : "Create project";
+  $("#add-hint").textContent = existing
+    ? "This project already exists — submitting rewrites its directories. Its shares are left alone; those are set in The split."
+    : "Creates the project. Give it a share of an account in The split afterwards, or it can never dispatch anywhere.";
+  // Prefilled from the project it names, but only for as long as nobody has
+  // typed into the field themselves.
+  const roots = $("#add-roots");
+  if (existing && roots.dataset.auto !== "no") {
+    roots.value = (((DATA.config.projects || {})[id] || {}).roots || []).join(", ");
+    roots.dataset.auto = "yes";
+  } else if (!existing && roots.dataset.auto === "yes") {
+    roots.value = "";
+    delete roots.dataset.auto;
+  }
 }
 
 function renderStamp() {
@@ -1002,17 +1672,23 @@ function render() {
   renderTiles();
   renderAttention();
   renderAccounts();
-  // Never rebuild the table under someone's cursor: a 30-second poll landing
-  // mid-edit would throw away the weight they were typing.
-  if (!editingAlloc()) renderAlloc();
+  // Never rebuild anything under someone's hand: a 30-second poll landing
+  // mid-gesture would take the slider out from under the pointer, or throw away
+  // the path they were halfway through typing. Drafts survive a rebuild — they
+  // live in the draft table, not in the DOM — so this only has to protect the gesture.
+  if (!busy("#split")) renderSplit();
+  if (!busy("#alloc")) renderAlloc();
   renderClaims();
-  renderAddWeights();
+  renderProjectForm();
   renderFoot();
 }
 
-function editingAlloc() {
+/* An INPUT specifically: a slider mid-drag or a path half typed is a gesture in
+   progress. A focused BUTTON is not — and treating it as one would freeze the
+   section that the button's own edit is supposed to redraw. */
+function busy(sel) {
   const el = document.activeElement;
-  return !!(el && el.tagName === "INPUT" && el.closest && el.closest("#alloc"));
+  return !!(el && el.tagName === "INPUT" && el.closest && el.closest(sel));
 }
 
 // ---------------------------------------------------------------------------
@@ -1093,16 +1769,93 @@ async function afterEdit(msg) {
 // interaction
 // ---------------------------------------------------------------------------
 
-document.addEventListener("change", async (e) => {
-  const el = e.target.closest ? e.target.closest("[data-act=weight]") : null;
-  if (!el) return;
-  const weight = Number(el.value);
-  const { project, account } = el.dataset;
-  try {
-    await api("PUT", "/v1/config/projects/" + encodeURIComponent(project) + "/accounts/" + encodeURIComponent(account), { weight });
-    await afterEdit(project + " → " + weight + " on " + account);
-  } catch (err) { flash(err.message, true); }
+/* Sliders are read on the input event, not the change event, so the whole panel tracks the
+   gesture rather than reporting afterwards what it did. Nothing here writes: it
+   moves a draft, and a draft is intent. */
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el || !el.dataset) return;
+  const act = el.dataset.act;
+
+  if (act === "share" || act === "reserve" || act === "target") {
+    const accountId = el.dataset.account;
+    const d = draftOf(accountId, true);
+    if (act === "share") {
+      const moved = redistribute(d.shares, el.dataset.project, Number(el.value));
+      d.shares = moved.vec;
+      if (moved.clamped) {
+        flash("Every other project on " + accountId + " is at 0, so this one takes the whole pool whatever the slider says. " +
+              "Capacity is held back with the reserve, not with a weight.", true);
+      }
+    } else if (act === "target") {
+      d.target = Number(el.value);
+      const reserve = d.reserve != null ? d.reserve : cfgNum(accountCfg(accountId), "interactive_reserve_pct", 0);
+      if (reserve > d.target) d.reserve = d.target;
+    } else {
+      const target = d.target != null ? d.target : cfgNum(accountCfg(accountId), "weekly_target_pct", 85);
+      d.reserve = Math.min(Number(el.value), target);
+    }
+    paintSplit(accountId);
+    return;
+  }
+
+  // The save button stays inert until the path is actually different, so the button is
+  // never a way to rewrite config.yaml with what it already says.
+  if (act === "roots") {
+    const btn = Array.prototype.find.call(
+      document.querySelectorAll("[data-act=save-roots]"), (b) => b.dataset.project === el.dataset.project);
+    if (btn) btn.disabled = el.value === el.dataset.orig;
+    return;
+  }
+
+  if (el.id === "add-id") { syncProjectForm(); return; }
+  if (el.id === "add-roots") { el.dataset.auto = "no"; }
 });
+
+/* Which slice of the bar is which project, answered by pointing at the project
+   rather than by asking anyone to match two shades of the same blue. */
+function lightSeg(e, on) {
+  const row = e.target && e.target.closest ? e.target.closest("[data-row-for]") : null;
+  const panel = row && row.closest("[data-mix]");
+  if (!panel) return;
+  each(panel, "[data-seg-for]", (seg) => {
+    if (seg.dataset.segFor === row.dataset.rowFor) seg.classList.toggle("lit", on);
+  });
+}
+document.addEventListener("pointerover", (e) => lightSeg(e, true));
+document.addEventListener("pointerout", (e) => lightSeg(e, false));
+document.addEventListener("focusin", (e) => lightSeg(e, true));
+document.addEventListener("focusout", (e) => lightSeg(e, false));
+
+/* A path is committed deliberately, never on blur: leaving a field is not a
+   statement about the field. */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const el = e.target;
+  if (!el || !el.dataset || el.dataset.act !== "roots") return;
+  e.preventDefault();
+  saveRoots(el.dataset.project, el.value);
+});
+
+async function saveRoots(projectId, value) {
+  const roots = value.split(",").map((s) => s.trim()).filter(Boolean);
+  try {
+    await api("PATCH", "/v1/config/projects/" + encodeURIComponent(projectId), { roots });
+    // The field keeps the focus — somebody editing a path is usually not done —
+    // so the row is not rebuilt, and what it now considers unchanged is set here.
+    const field = Array.prototype.find.call(
+      document.querySelectorAll("[data-act=roots]"), (i) => i.dataset.project === projectId);
+    if (field) {
+      field.dataset.orig = field.value;
+      const btn = Array.prototype.find.call(
+        document.querySelectorAll("[data-act=save-roots]"), (b) => b.dataset.project === projectId);
+      if (btn) btn.disabled = true;
+    }
+    await afterEdit(roots.length
+      ? projectId + " is charged for work under " + roots.join(", ")
+      : projectId + " now has no roots — nothing will be attributed to it");
+  } catch (err) { flash(err.message, true); }
+}
 
 document.addEventListener("click", async (e) => {
   const el = e.target.closest ? e.target.closest("[data-act]") : null;
@@ -1111,22 +1864,88 @@ document.addEventListener("click", async (e) => {
   try {
     if (act === "refresh") return void refresh(true);
 
+    /* Removing a project deletes its directories, its weights and its whole row
+       from config.yaml, and one has already been lost to a single click here.
+       So the name must be typed: a confirm dialog gets answered reflexively, a
+       name does not. */
     if (act === "rm") {
-      if (!confirm("Remove project " + project + "?\n\nIts allocation goes back to the other projects naming the same accounts.")) return;
+      const p = (DATA.config.projects || {})[project] || {};
+      const named = Object.keys(p.accounts || {});
+      const typed = prompt(
+        "Remove the project \"" + project + "\" from config.yaml?\n\n" +
+        "This deletes its directories and its weights on " + (named.length ? named.join(", ") : "no accounts") + ". " +
+        "Every other project naming those accounts gets a larger share.\n\n" +
+        "Type the project name to confirm:");
+      if (typed == null) return;
+      if (typed.trim() !== project) return void flash("Nothing removed \u2014 that is not the project name.", true);
       await api("DELETE", "/v1/config/projects/" + encodeURIComponent(project));
       return void afterEdit("Removed " + project);
     }
 
     if (act === "toggle") {
       const to = el.dataset.to === "1";
+      if (!to && !confirm(
+        "Disable " + project + "?\n\nIt stops dispatching, and because it stops competing for its accounts, every " +
+        "other project on them immediately gets a larger share. Its weights are kept.")) return;
       await api("PATCH", "/v1/config/projects/" + encodeURIComponent(project), { enabled: to });
       return void afterEdit((to ? "Enabled " : "Disabled ") + project);
     }
 
-    if (act === "revoke") {
-      if (!confirm("Stop " + project + " from using " + account + "?\n\nIt keeps its weights on other accounts.")) return;
-      await api("DELETE", "/v1/config/projects/" + encodeURIComponent(project) + "/accounts/" + encodeURIComponent(account));
-      return void afterEdit(project + " may no longer use " + account);
+    if (act === "save-roots") {
+      const field = Array.prototype.find.call(
+        document.querySelectorAll("[data-act=roots]"), (i) => i.dataset.project === project);
+      if (field) await saveRoots(project, field.value);
+      return;
+    }
+
+    // --- the split -------------------------------------------------------
+    if (act === "include") {
+      // At 0, which takes nothing from anyone until a decision is made about it.
+      const d = draftOf(account, true);
+      delete d.drop[project];
+      d.shares[project] = 0;
+      renderSplit();
+      const panel = panelFor(account);
+      const slider = panel && Array.prototype.find.call(
+        panel.querySelectorAll("[data-act=share]"), (i) => i.dataset.project === project);
+      if (slider) slider.focus();
+      return;
+    }
+
+    if (act === "unname") {
+      const d = draftOf(account, true);
+      delete d.shares[project];
+      d.drop[project] = true;
+      // What it held goes back to the rest, in proportion — and only in the
+      // draft. The diff underneath says so before Apply does it.
+      d.shares = round100(normalise(d.shares));
+      return void renderSplit();
+    }
+
+    if (act === "keep") {
+      const d = draftOf(account, true);
+      delete d.drop[project];
+      d.shares[project] = 0;
+      d.shares = round100(normalise(d.shares));
+      return void renderSplit();
+    }
+
+    if (act === "apply-split") return void applySplit(account);
+    if (act === "cancel-split") { delete drafts[account]; return void renderSplit(); }
+
+    if (act === "goto-split") {
+      $("#h-split").scrollIntoView({ behavior: prefersStill() ? "auto" : "smooth", block: "start" });
+      return;
+    }
+
+    if (act === "focus-roots") {
+      const field = Array.prototype.find.call(
+        document.querySelectorAll("[data-act=roots]"), (i) => i.dataset.project === project);
+      if (!field) return;
+      field.scrollIntoView({ behavior: prefersStill() ? "auto" : "smooth", block: "center" });
+      field.focus();
+      field.select();
+      return;
     }
 
     if (act === "ledger") {
@@ -1142,20 +1961,40 @@ document.addEventListener("click", async (e) => {
   } catch (err) { flash(err.message, true); }
 });
 
+function prefersStill() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+/**
+ * One form, two verbs.
+ *
+ * POST /v1/config/projects refuses a name that already exists, which is right
+ * of it — creating over a project is how configuration gets lost — but it is no
+ * reason to make somebody open a terminal to move a directory. So the form
+ * decides which request it is, and falls back if it guessed from a config that
+ * changed underneath it a moment ago.
+ */
 $("#add-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = $("#add-id").value.trim();
   const roots = $("#add-roots").value.split(",").map((s) => s.trim()).filter(Boolean);
-  const accounts = {};
-  document.querySelectorAll("[data-add-account]").forEach((el) => {
-    const v = Number(el.value);
-    if (v > 0) accounts[el.dataset.addAccount] = v;
-  });
+  if (!id) return;
+  const path = "/v1/config/projects/" + encodeURIComponent(id);
   try {
-    await api("POST", "/v1/config/projects", { id, roots, accounts });
-    $("#add-id").value = ""; $("#add-roots").value = "";
-    document.querySelectorAll("[data-add-account]").forEach((el) => (el.value = "0"));
-    await afterEdit("Added " + id);
+    if ((DATA.config.projects || {})[id]) {
+      await api("PATCH", path, { roots });
+    } else {
+      try {
+        await api("POST", "/v1/config/projects", { id, roots, accounts: {} });
+      } catch (err) {
+        if (String(err.message).indexOf("already exists") < 0) throw err;
+        await api("PATCH", path, { roots });
+      }
+    }
+    $("#add-id").value = "";
+    $("#add-roots").value = "";
+    delete $("#add-roots").dataset.auto;
+    await afterEdit(id + " saved" + (roots.length ? "" : " \u2014 with no roots, nothing will be attributed to it"));
   } catch (err) { flash(err.message, true); }
 });
 
@@ -1232,8 +2071,21 @@ export function renderPage(o: Overton): string {
     </p>
   </section>
 
+  <section aria-labelledby="h-split">
+    <h2 id="h-split">The split <span class="h2-note">one account at a time — the 7-day window</span></h2>
+    <div class="mixers" id="split"></div>
+    <p class="note">
+      Every account's week divides into three: what its projects may spend, what is <strong>held back for you</strong>,
+      and the headroom above the account's own stop that nobody may touch. Weights are relative — they always divide
+      the whole of what is left — so a slider going up is another one coming down, and the only way to leave capacity
+      genuinely unallocated is to hold it back. A project at <code>0</code> is not a small share; it is a statement
+      that it may never spend here, and the gate answers <code>deny</code>. Nothing is written to
+      <code>config.yaml</code> until you apply it.
+    </p>
+  </section>
+
   <section aria-labelledby="h-alloc">
-    <h2 id="h-alloc">Allocation <span class="h2-note">the 7-day window</span></h2>
+    <h2 id="h-alloc">Allocation <span class="h2-note">what the gate makes of it</span></h2>
     <div class="panel">
       <div class="tablewrap">
         <table class="grid" id="alloc">
@@ -1259,9 +2111,10 @@ export function renderPage(o: Overton): string {
       <span class="item t-bad"><span class="mk">&#xd7;</span> deny — policy fixes this, never retry</span>
     </div>
     <p class="note">
-      Weights are relative: raising one lowers everyone else's share, because the total always divides the
-      account's dispatchable points. The verdict is the whole policy chain, so a pairing can be on pace and
-      still refused — ask <em>why</em> for the decision itself.
+      One group per project, so this is the other way round from <em>The split</em> above — and it is a readout,
+      not a control: weights and shares are set there, where the redistribution they cause can be seen while it is
+      being decided. The verdict is the whole policy chain, so a pairing can be on pace and still refused — ask
+      <em>why</em> for the decision itself.
     </p>
   </section>
 
@@ -1271,19 +2124,26 @@ export function renderPage(o: Overton): string {
   </section>
 
   <section aria-labelledby="h-add">
-    <h2 id="h-add">Add a project</h2>
+    <h2 id="h-add">Projects <span class="h2-note">a name and the directories it owns</span></h2>
     <form class="panel" id="add-form">
       <div class="add">
-        <div><label for="add-id">Name</label><input type="text" id="add-id" placeholder="sideproject" required></div>
-        <div><label for="add-roots">Directories</label><input type="text" id="add-roots" placeholder="~/Projects/sideproject, ~/Projects/other"></div>
-        <button type="submit" class="primary">Add project</button>
+        <div>
+          <label for="add-id">Name</label>
+          <input type="text" id="add-id" placeholder="sideproject" list="project-names" autocomplete="off" required>
+          <datalist id="project-names"></datalist>
+        </div>
+        <div>
+          <label for="add-roots">Directories</label>
+          <input type="text" id="add-roots" placeholder="~/Projects/sideproject, ~/Projects/other">
+        </div>
+        <button type="submit" class="primary" id="add-submit">Create project</button>
       </div>
-      <div class="weights" id="add-weights"></div>
+      <p class="note" id="add-hint" style="padding: 0 14px 12px; margin: 0"></p>
     </form>
     <p class="note">
       Directories decide attribution: work whose path sits under one of them is charged to this project, longest
-      root first. An account left at 0 is simply not named, and a project may never spend on an account it does
-      not name.
+      root first. Naming a project that already exists updates it — the directories of every project are also
+      editable in place, in the row above. Capacity is a separate question, and it is answered in <em>The split</em>.
     </p>
   </section>
   </main>
