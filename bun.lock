@@ -4,15 +4,13 @@
   "workspaces": {
     "": {
       "name": "overton",
-      "dependencies": {
+      "devDependencies": {
         "@overton/core": "workspace:*",
         "@overton/engine": "workspace:*",
         "@overton/ledger": "workspace:*",
         "@overton/policy": "workspace:*",
         "@overton/providers": "workspace:*",
         "@overton/server": "workspace:*",
-      },
-      "devDependencies": {
         "@types/bun": "^1.3.0",
         "typescript": "^5.9.0",
       },

@@ -1,25 +1,33 @@
 {
-  "name": "overton",
+  "name": "@hookdump/overton",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "bin": {
-    "overton": "./apps/overton/src/index.ts"
+  "description": "A quota arbiter for coding agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hookdump/overton.git"
   },
+  "bin": {
+    "overton": "./dist/overton.js"
+  },
+  "files": [
+    "dist"
+  ],
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
     "overton": "bun run apps/overton/src/index.ts",
+    "build": "bun build apps/overton/src/index.ts --target=bun --outfile=dist/overton.js",
+    "prepare": "bun run build",
     "test": "bun test",
     "typecheck": "bun run --filter='*' typecheck"
   },
   "devDependencies": {
     "@types/bun": "^1.3.0",
-    "typescript": "^5.9.0"
-  },
-  "dependencies": {
+    "typescript": "^5.9.0",
     "@overton/core": "workspace:*",
     "@overton/providers": "workspace:*",
     "@overton/ledger": "workspace:*",
