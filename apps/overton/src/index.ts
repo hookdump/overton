@@ -44,6 +44,10 @@ RUNNING
   doctor                      check config and credentials
   init                        write a starter config
 
+INTEGRATING
+  paperclip install           build the bundled Paperclip adapter and register it
+  paperclip status            is the adapter registered?
+
 OPTIONS
   --json                      machine-readable output
   --config <path>             config file (default ~/.overton/config.yaml)

@@ -4,6 +4,7 @@ import type { ParsedArgs } from "../index.ts";
 import { askCommands } from "./ask.ts";
 import { lookCommands } from "./look.ts";
 import { opsCommands } from "./ops.ts";
+import { paperclipCommands } from "./paperclip.ts";
 import { projectCommand } from "./project.ts";
 
 export interface CommandContext {
@@ -23,5 +24,6 @@ export const COMMANDS: Record<string, Command> = {
   ...askCommands,
   ...lookCommands,
   ...opsCommands,
+  ...paperclipCommands,
   project: projectCommand,
 };
