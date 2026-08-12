@@ -7,9 +7,10 @@
  * which is how two of this project's worst afternoons started.
  */
 
-import { ConfigError, loadConfigDoc, saveConfigDoc, setShare, table } from "@overton/core";
+import { ConfigError, loadConfigDoc, saveConfigDoc, setShare } from "@overton/core";
 import { addProject, removeProject, setProjectRoots } from "@overton/core";
 import { Overton, projectViews } from "@overton/engine";
+import { renderSplit } from "../render.ts";
 import type { Command, CommandContext } from "./index.ts";
 
 /** `--account claude-work=2` / `--account ollama` → [id, weight]. */
@@ -41,19 +42,7 @@ function showSplit(ctx: CommandContext, projectId: string): void {
     cfg: ctx.overton.cfg,
     configFile: ctx.overton.configFile ?? undefined,
   });
-  const rows: string[][] = [];
-  for (const p of projectViews(fresh)) {
-    for (const a of p.accounts) {
-      rows.push([
-        p.projectId === projectId ? `${p.projectId} *` : p.projectId,
-        a.accountId,
-        `${a.sharePct.toFixed(0)}%`,
-        a.alloc.toFixed(1),
-        a.pace,
-      ]);
-    }
-  }
-  process.stdout.write(table(["PROJECT", "ACCOUNT", "SHARE", "ALLOC", "PACE"], rows) + "\n");
+  process.stdout.write(renderSplit(projectViews(fresh), projectId) + "\n");
 }
 
 /**

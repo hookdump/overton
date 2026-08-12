@@ -7,9 +7,11 @@
  * `overton serve` is running.
  */
 
-import { ConfigError, EXIT_CODE, Paths, loadConfig, openDb } from "@overton/core";
+import { ConfigError, EXIT_CODE, Paths, loadConfig, openDb, type Config } from "@overton/core";
 import { Overton } from "@overton/engine";
 import { COMMANDS, type CommandContext } from "./commands/index.ts";
+import { runRemote } from "./remote/commands.ts";
+import { resolveRemote, type RemoteConfig, type RemoteTarget } from "./remote/target.ts";
 
 const USAGE = `overton — a quota arbiter for coding agents
 
@@ -50,8 +52,18 @@ INTEGRATING
 
 OPTIONS
   --json                      machine-readable output
+  --remote <name|url>         ask another machine's Overton instead of this one
   --config <path>             config file (default ~/.overton/config.yaml)
   --home <path>               state directory (default ~/.overton)
+
+REMOTE
+  One arbiter can answer for every machine sharing a subscription. Point this
+  CLI at it with --remote, $OVERTON_REMOTE, or a remotes: block in config; a
+  name resolves through that block, anything with :// is used as given.
+
+  meter, daemon, serve, mcp, doctor, plugins, init, paperclip and explain stay
+  local and say so. A remote that cannot be reached is an error — no question
+  is ever quietly answered from this machine's database instead.
 
 EXIT CODES
   ask and claim exit 0 go · 10 wait · 11 ask · 12 deny, so a shell can branch
@@ -125,17 +137,40 @@ async function main(argv: string[]): Promise<number> {
   const paths = new Paths(
     typeof args.flags.home === "string" ? args.flags.home : Paths.fromEnv().home,
   );
+  const configFile = typeof args.flags.config === "string" ? args.flags.config : paths.configFile;
 
-  // `init` runs before there is a config to load, by definition.
-  if (command.needsConfig === false) {
-    return command.run({ args, paths } as CommandContext);
-  }
+  // Read at most once, and only if something asks: `--remote https://host` needs
+  // no local config at all, which is the point — a machine that only ever
+  // consults a shared arbiter should not have to keep a config to do it.
+  let loaded: Config | null = null;
+  const config = () => (loaded ??= loadConfig(configFile));
 
   let overton: Overton;
   try {
-    const configFile = typeof args.flags.config === "string" ? args.flags.config : paths.configFile;
-    const cfg = loadConfig(configFile);
-    overton = new Overton({ db: openDb(paths.dbFile), cfg, configFile });
+    // `init` and `paperclip` run before there is a config to read, so a missing
+    // or broken one must not stop them. It is still CONSULTED when it parses:
+    // otherwise `OVERTON_REMOTE=e16 overton init` would be told that no remotes
+    // are configured, by a process looking straight at the file that configures
+    // one. They are local-only commands either way; this only decides whether
+    // they are refused or run.
+    const optional = (): RemoteConfig => {
+      try {
+        return config();
+      } catch {
+        return {};
+      }
+    };
+    const remoteConfig: () => RemoteConfig = command.needsConfig === false ? optional : config;
+    const target: RemoteTarget | null = resolveRemote({
+      flag: args.flags.remote,
+      env: process.env,
+      config: remoteConfig,
+    });
+    if (target) return await runRemote(target, args);
+
+    if (command.needsConfig === false) return command.run({ args, paths } as CommandContext);
+
+    overton = new Overton({ db: openDb(paths.dbFile), cfg: config(), configFile });
   } catch (e) {
     if (e instanceof ConfigError) {
       process.stderr.write(`${e.message}\n`);

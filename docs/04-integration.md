@@ -211,20 +211,105 @@ WantedBy=default.target
 
 ---
 
-## Multiple machines
+## Multiple machines — remote mode
 
-Overton is single-host by design. If two machines share a subscription, run
-Overton on one and have the other ask it over Tailscale:
+One host meters and holds the database; every other machine's CLI asks it. That
+is the difference between four machines each concluding it is on pace and one
+arbiter that knows what all four have spent.
 
 ```bash
-overton() { curl -fsS "https://my-host.tailnet.ts.net/overton/v1/ask?project=$1&account=$2&format=text"; }
+overton --remote https://arbiter.tailnet.ts.net status
 ```
 
-The metering is still correct — the vendor's number is account-wide, not
-per-machine. What degrades is *attribution*: the remote machine's transcripts
-are not on the arbiter's disk, so its spend lands in `@interactive` rather than
-against a project. `reading-guard` accounts for this honestly rather than
-pretending otherwise.
+Name it, and the name appears on every command, so nobody has to wonder which
+Overton answered:
+
+```yaml
+# ~/.overton/config.yaml on the laptop
+remotes:
+  e16:
+    url: https://overton.my-tailnet.ts.net
+default_remote: e16
+```
+
+```console
+$ overton ask myproject claude-personal
+overton · e16 https://overton.my-tailnet.ts.net
+go · myproject may dispatch on claude-personal
+  7d  used 0.0 of 22.1 pts allowed (alloc 30.0, 64% elapsed)
+```
+
+The arbiter itself needs no new configuration — remote mode speaks the same
+HTTP surface documented above. Expose it with Tailscale as usual:
+
+```bash
+tailscale serve --bg https://+:443 http://127.0.0.1:7787
+```
+
+### Where the target comes from
+
+Highest first:
+
+| | |
+|---|---|
+| `--remote <name\|url>` | this invocation |
+| `$OVERTON_REMOTE` | this shell |
+| `remotes:` + `default_remote:` | this machine |
+| `remote: <url>` | the same, unnamed, for a host with only one |
+
+A value containing `://` is used as given; anything else is a **name** looked up
+in `remotes:`. A name that is not there is an error listing the ones that are —
+never a near-miss guess. One remote with no `default_remote` is the default;
+*several* with no `default_remote` are an address book, and stay local until
+`--remote` picks one. With nothing set at all, everything behaves exactly as it
+did before remote mode existed.
+
+### Which commands go over the wire
+
+| | |
+|---|---|
+| **remote** | `ask` `claim` `renew` `release` `run` `status` `windows` `projects` `claims` `ledger` `project ls\|ensure\|rm` |
+| **local, and says so** | `meter` `daemon` `serve` `mcp` `doctor` `plugins` `init` `paperclip` `explain` |
+
+The local-only ones are not missing features. Metering needs the vendor
+credentials *on the machine it runs on*; `doctor` checks those same
+credentials; `daemon` and `serve` bind a port to a database; `init` and
+`paperclip` are about the machine you are typing on. `explain` is the
+interesting one: there is no HTTP route that serves `Facts`, so a remote can
+tell you what it decided but not show its working. Each refuses with the reason
+and an `ssh` line, rather than answering a different question.
+
+### It never falls back
+
+If the remote is unreachable, the command **fails** — exit 1, the URL and the
+underlying error on stderr, nothing on stdout:
+
+```console
+$ overton status
+overton: https://overton.my-tailnet.ts.net is unreachable: Unable to connect
+  the remote (e16 https://overton.my-tailnet.ts.net, from config) is where this question had to go,
+  so nothing was answered from this machine's database.
+```
+
+Quietly rendering the local database instead would produce a complete,
+plausible, entirely wrong table — every number from the wrong arbiter, and
+nothing on the screen admitting it. That is the one failure worse than no
+answer, so it is not an option, not even for read-only commands.
+
+Verdict exit codes are identical over the wire: `ask` and `claim` still exit
+0 `go` / 10 `wait` / 11 `ask` / 12 `deny` (the HTTP decision carries the code,
+so the arbiter remains the authority), and 1 is only ever a transport failure.
+`--json` output is byte-for-byte the local document, so a script cannot tell
+which Overton answered.
+
+### What still degrades
+
+Metering stays correct — the vendor's number is account-wide, not per-machine.
+What degrades is *attribution*: the other machine's transcripts are not on the
+arbiter's disk, so its spend lands in `@interactive` rather than against a
+project. `reading-guard` accounts for that honestly rather than pretending
+otherwise, and a `claim` from a remote CLI carries no pid, because a pid from
+another machine points at whatever unrelated process holds that number here.
 
 [symphony]: https://github.com/openai/symphony
 [paperclip]: https://github.com/paperclipai/paperclip

@@ -151,12 +151,36 @@ export const ServerSchema = z
   })
   .default({});
 
+/**
+ * Another Overton, by name.
+ *
+ * Named rather than a bare URL because the name is what appears on every line
+ * of output: someone reading a table has to be able to tell at a glance which
+ * arbiter answered, and `e16` is legible where a tailnet hostname is furniture.
+ * Passthrough for the same reason the account block is — a future field (a
+ * token, a timeout) should not need a schema bump to be readable by whatever
+ * grows to want it.
+ */
+export const RemoteSchema = z.object({ url: z.string().min(1) }).passthrough();
+
+export type RemoteEntry = z.infer<typeof RemoteSchema>;
+
 export const ConfigSchema = z
   .object({
     accounts: z.record(z.string(), AccountSchema).default({}),
     projects: z.record(z.string(), ProjectSchema).default({}),
     policy: PolicySchema,
     server: ServerSchema,
+
+    /**
+     * Where questions go. Absent means this machine's own database, which is
+     * the whole of the behaviour when nobody asks for anything else.
+     */
+    remotes: z.record(z.string(), RemoteSchema).default({}),
+    /** Which of them, when several are named. One remote needs no default. */
+    default_remote: z.string().optional(),
+    /** The one-line shorthand, for a host with exactly one remote and no wish to name it. */
+    remote: z.string().optional(),
   })
   .strict();
 
@@ -205,6 +229,14 @@ function validate(cfg: Config, file?: string): Config {
           `dispatchable below weekly_target_pct (${a.weekly_target_pct}) — every request would be refused`,
       );
     }
+  }
+
+  if (cfg.default_remote && !cfg.remotes[cfg.default_remote]) {
+    const known = Object.keys(cfg.remotes);
+    problems.push(
+      `default_remote: \`${cfg.default_remote}\` is not in \`remotes\`` +
+        (known.length ? ` — configured: ${known.join(", ")}` : " — no remotes are configured"),
+    );
   }
 
   for (const [pid, p] of Object.entries(cfg.projects)) {

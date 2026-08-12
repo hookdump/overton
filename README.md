@@ -114,6 +114,43 @@ overton mcp                                      # MCP over stdio, so an agent c
 See [`docs/04-integration.md`](docs/04-integration.md) for recipes covering
 Symphony, Paperclip, GitHub Actions and a bare shell loop.
 
+## More than one machine
+
+A laptop and a build host sharing one subscription each think they are on pace,
+for the same reason two orchestrators do. Run Overton on one of them and point
+the others' CLI at it, and there is a single arbiter again:
+
+```yaml
+# ~/.overton/config.yaml on the laptop
+remotes:
+  e16:
+    url: https://overton.my-tailnet.ts.net
+default_remote: e16
+```
+
+```console
+$ overton status
+overton · e16 https://overton.my-tailnet.ts.net
+ACCOUNT          PROVIDER   PLAN  7d                5h  READING  CLAIMS
+---------------  ---------  ----  ----------------  --  -------  ------
+claude-personal  anthropic  pro   [######----] 57%  0%  2m ago   0/6
+```
+
+Or per invocation: `overton --remote e16 status`, `--remote https://host` for
+one that is not in the config, or `$OVERTON_REMOTE` for a shell. The name is on
+every line of output because *which* Overton answered is not something anyone
+should have to infer.
+
+The deciding and looking commands go over the wire; `meter`, `daemon`, `serve`,
+`mcp`, `doctor`, `plugins`, `init`, `paperclip` and `explain` stay local and say
+why. **Nothing ever falls back.** An unreachable remote is exit 1 with the URL
+and the cause — never a plausible table quietly rendered from this machine's own
+database, which would be wrong in every number and admit it in none.
+
+Exit codes and `--json` are identical either way, so a script cannot tell the
+difference. [`docs/04-integration.md`](docs/04-integration.md#multiple-machines--remote-mode)
+has the precedence rules and the full command split.
+
 ## Configuration
 
 ```yaml
@@ -258,12 +295,15 @@ stand.
 ## Status
 
 **v0.1 — working, and young.** Metering, attribution, allocation, gating,
-claims, CLI, HTTP and MCP all run against real accounts. 51 tests.
+claims, CLI, HTTP and MCP all run against real accounts. 79 tests.
 
 A web deck ships with the daemon — accounts, allocation, and a form to add or
 remove projects — at `http://127.0.0.1:7787`.
 
-Not yet: remote workers, or more providers than the three here. Issues and PRs welcome — especially new providers.
+Not yet: attribution for spend on a machine other than the arbiter's — remote
+mode gates correctly there, but the transcripts are not on the arbiter's disk,
+so that spend lands in `@interactive`. Nor more providers than the three here.
+Issues and PRs welcome — especially new providers.
 
 ## License
 

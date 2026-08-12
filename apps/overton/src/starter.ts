@@ -79,4 +79,14 @@ policy:
 server:
   host: 127.0.0.1   # loopback only. Expose with \`tailscale serve\`, not 0.0.0.0
   port: 7787
+
+# Another machine's Overton, so one arbiter sees every machine's spend. With
+# this set, every deciding and looking command asks THAT host instead of this
+# database; metering, doctor and explain stay here and say so. An unreachable
+# remote is an error, never a quiet answer from local data.
+#
+# remotes:
+#   e16:
+#     url: https://overton.my-tailnet.ts.net
+# default_remote: e16      # only needed when there are several
 `;
