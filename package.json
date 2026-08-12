@@ -21,7 +21,7 @@
   "scripts": {
     "overton": "bun run apps/overton/src/index.ts",
     "build": "bun build apps/overton/src/index.ts --target=bun --outfile=dist/overton.js",
-    "prepare": "bun run build",
+    "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "bun run --filter='*' typecheck"
   },

@@ -3,7 +3,17 @@ node_modules/
 *.db-wal
 *.db-shm
 .DS_Store
-dist/
+dist/*
+# …except the shipped CLI bundle. `bun install -g github:hookdump/overton`
+# cannot build it: a global install has no workspace, so `@overton/*` does not
+# resolve at install time. The artifact has to be in the tree for a git install
+# to work at all. Rebuild with `bun run build` and commit it when releasing.
+!dist/overton.js
 *.log
 .overton/
 contrib/paperclip-adapter/dist/
+# …except the shipped CLI bundle. `bun install -g github:hookdump/overton`
+# cannot build it: a global install has no workspace, so `@overton/*` does not
+# resolve at install time. The artifact has to be in the tree for a git install
+# to work at all. Rebuild with `bun run build` and commit it when releasing.
+!dist/overton.js
