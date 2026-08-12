@@ -9,6 +9,7 @@
 
 import {
   GATED_WINDOWS,
+  elapsedFraction,
   expandHome,
   humanDuration,
   paceState,
@@ -25,6 +26,22 @@ export interface WindowView {
   utilizationPct: number;
   resetsAt: number | null;
   resetsIn: string | null;
+  /** The vendor's nominal length. A Codex "weekly" may not be seven days. */
+  windowSec: number;
+  /**
+   * How much of the window has passed, 0-100.
+   *
+   * Utilization alone is not a reading anyone can act on: 50% used is alarming
+   * at 20% elapsed and comfortable at 90%. Every surface that shows a
+   * utilization figure needs the clock beside it, so it is derived HERE with
+   * the same `elapsedFraction` the allocator paces with rather than
+   * reconstructed downstream from a window length the vendor may not use.
+   *
+   * A window with no reset instant has no elapsed fraction — this reports the
+   * allocator's own missing-data value, 0, and `resetsAt: null` is what tells
+   * a renderer to say "unknown" instead of "0%".
+   */
+  elapsedPct: number;
   freshness: Freshness;
 }
 
@@ -95,6 +112,8 @@ export function accountViews(o: Overton): AccountView[] {
           utilizationPct: w!.utilizationPct,
           resetsAt: w!.resetsAt,
           resetsIn: w!.resetsAt != null ? humanDuration(w!.resetsAt - now) : null,
+          windowSec: w!.windowSec,
+          elapsedPct: w!.resetsAt == null ? 0 : elapsedFraction(w!.resetsAt, w!.windowSec, now) * 100,
           freshness: reading!.freshness,
         })),
       claims: openClaims(o.db, accountId).length,
