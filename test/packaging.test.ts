@@ -79,9 +79,22 @@ describe("the published package", () => {
     expect(pkg.bin.overton).toStartWith("./dist/");
   });
 
-  test("builds on install and on publish", () => {
+  test("builds before publishing, and never on install", () => {
     expect(pkg.scripts.build).toContain("bun build");
-    expect(pkg.scripts.prepare).toBe("bun run build");
+    expect(pkg.scripts.prepublishOnly).toBe("bun run build");
+    // `prepare` would run on install, where there is no workspace and so no
+    // way to resolve `@overton/*`. It fails by construction, so it must not
+    // come back: bun blocks it by default and trusting it only surfaces the
+    // failure. The bundle is committed instead.
+    expect(pkg.scripts.prepare).toBeUndefined();
+  });
+
+  test("the committed bundle is the one bin points at", () => {
+    // A git install runs this file verbatim — if it is missing or stale, every
+    // machine installing from GitHub gets the old CLI or none at all.
+    const shipped = join(repo, "dist", "overton.js");
+    expect(statSync(shipped).isFile()).toBe(true);
+    expect(pkg.bin.overton).toBe("./dist/overton.js");
   });
 });
 
