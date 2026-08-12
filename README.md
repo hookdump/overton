@@ -236,13 +236,34 @@ its rollout JSONL — are documented in [`docs/02-providers.md`](docs/02-provide
 | [04 — Integration](docs/04-integration.md) | Recipes: Symphony, Paperclip, Actions, shell, MCP |
 | [05 — Invariants](docs/05-invariants.md) | The rules that must not regress |
 
+## Roster — the other half
+
+Overton answers *may this project spend on this account right now?* It does not
+answer *who is this seat, and how do I run as it?* — which credential directory,
+which plan, whether the seat is even signed in.
+
+[Roster][roster] answers that, and reads the same `accounts:` block out of this
+config. One registry, two readers; neither tool requires the other, which is the
+point — adopt the one you need.
+
+```console
+$ roster ls                                    # who is available to play
+$ roster run claude-personal -- claude -p "…"  # identity, no gate
+$ overton run side claude-personal -- claude   # gate, then identity
+```
+
+Together they are **Desk** — in an orchestra, a desk is two players sharing one
+stand.
+
 ## Status
 
 **v0.1 — working, and young.** Metering, attribution, allocation, gating,
 claims, CLI, HTTP and MCP all run against real accounts. 51 tests.
 
-Not yet: remote workers, more providers than the three here, or any UI beyond a
-terminal table. Issues and PRs welcome — especially new providers.
+A web deck ships with the daemon — accounts, allocation, and a form to add or
+remove projects — at `http://127.0.0.1:7787`.
+
+Not yet: remote workers, or more providers than the three here. Issues and PRs welcome — especially new providers.
 
 ## License
 
@@ -251,3 +272,4 @@ MIT © Ignacio Freiberg
 [symphony]: https://github.com/openai/symphony
 [paperclip]: https://github.com/paperclipai/paperclip
 [gastown]: https://github.com/steveyegge/gastown
+[roster]: https://github.com/hookdump/roster
